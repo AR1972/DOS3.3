@@ -1,0 +1,42 @@
+#**     makefile for SORT
+
+DEST	=sort
+MSG	=messages
+
+#	Path definitions
+
+BIOS	=..\..\BIOS
+DOS	=..\..\DOS
+
+#       Definitions for assembler
+
+ASM	=masm
+AFLAGS	=-Mx -t
+AINC	=-I..\..\inc -I$(DOS)
+
+#       Definitions for C compiler
+
+CC	=cl
+CFLAGS	=-Ox -Zlp
+CINC	=-I..\..\h
+
+#	Definitions for linker
+
+LINK	=link
+LIBC	=..\..\libc
+
+
+# Rules and Dependencies follow
+
+
+
+SORT.OBJ: SORT.ASM $(DOS)\SYSCALL.INC
+	masm $(AFLAGS) $(AINC) SORT;
+
+$(MSG).OBJ: $(MSG).ASM $(MSG).inc
+	masm $(AFLAGS) $(AINC) $(MSG);
+
+SORT.COM: SORT.OBJ $(MSG).OBJ
+	LINK @SORT.LNK
+	EXEFIX SORT.EXE 1 1
+

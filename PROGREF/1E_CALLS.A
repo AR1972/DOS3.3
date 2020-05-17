@@ -1,0 +1,3533 @@
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Get Verify State (Function 54H)
+
+ Call:
+
+ AH = 54H
+
+ Return:
+
+ AL
+  0 = No verify after write
+  1 = Verify after write
+
+
+
+Comments:
+
+Function 54H checks whether MS-DOS verifies write operations to disk
+files. The status returns in AL: 0 if verify is off, 1 if verify is on.
+
+You can set the verify status with Function 2EH (Set/Reset Verify Flag).
+
+Macro Definition:
+
+
+get_verify macro
+  mov ah,54H
+  int 21H
+  endm
+
+
+Example:
+
+The following program displays the verify status:
+
+message db "Verify ","$"
+on db "on.",0DH,0AH,"$"
+off db "off.",0DH,0AH,"$"
+;
+begin: display message ;See Function 09H
+ get_verify ;THIS FUNCTION
+ cmp al,0 ;Is flag off?
+
+  1
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+ jg ver_on ;No, it's on
+ display off ;See Function 09H
+ jmp return ;Go home
+ver_on: display on ;See Function 09H
+
+
+
+2
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Change Directory Entry (Function 56H)
+
+ Call:
+
+ AH = 56H
+ DS:DX
+  Pointer to pathname
+ ES:DI
+  Pointer to second pathname
+
+ Return:
+
+ Carry set:
+ AX
+  2 = File not found
+  3 = Path not found
+  5 = Access denied
+  17 = Not same device
+ Carry not set:
+  No error
+
+
+Comments:
+
+Function 56H renames a file by changing its directory entry. DX must
+contain the offset (from the segment address in DS) of an ASCIZ string that
+contains the pathname of the entry to be changed. DI must contain the
+offset (from the segment address in ES) of an ASCIZ string that contains a
+second pathname to which the first is to be changed.
+
+If a directory entry for the first pathname exists, it is changed to the
+second pathname.
+
+The directory paths need not be the same; in effect, you can move the file
+to another directory by renaming it. You cannot use this function request
+to copy a file to another drive, however; if the second pathname specifies a
+drive, the first pathname must specify or default to the same drive.
+
+You cannot use this function request to rename an open file, a hidden file,
+a system file, or a subdirectory, because it may corrupt your disk.
+
+If there is an error, the carry flag (CF) is set and the error code returns in
+AX.
+
+Code
+ Meaning
+_ ________________________________________________________________
+
+2 One of files is invalid or not open
+
+
+
+  3
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+3 One of paths is invalid or not open
+
+5 First pathname specifies a directory, second pathname specifies an
+ existing file; or second directory entry could not be opened
+
+17 Both files not on the same drive
+
+
+Macro Definition:
+
+
+rename_file macro old_path,new_path
+  mov dx,offset old_path
+  push ds
+  pop es
+  mov di,offset new_path
+  mov ah,56H
+  int 21H
+  endm
+
+
+Example:
+
+The following program prompts for the name of a file and a new name,
+then renames the file.
+
+prompt1 db "Filename: $"
+prompt2 db "New name: $"
+old_path db 15,?,15 dup (?)
+new_path db 15,?,15 dup (?)
+crlf db 0DH,0AH,"$"
+;
+begin: display prompt1 ;See Function 09H
+ get_string 15,old_path ;See Function 0AH
+ xor bx,bx ;To use BL as index
+ mov bl,old_path[1] ;Get string length
+ mov old_path[bx+2],0 ;Make an ASCIZ string
+ display crlf ;See Function 09H
+ display prompt2 ;See Function 09H
+ get_string 15,new_path ;See Function 0AH
+ xor bx,bx ;To use BL as index
+ mov bl,new_path[1] ;Get string length
+ mov new_path[bx+2],0 ;Make an ASCIZ string
+ display crlf ;See Function 09H
+ rename_file old_path[2],new_path[2];THIS FUNCTION
+ jc error_rename ;Routine not shown
+
+
+
+4
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Get/Set Date/Time of File(Function 57H)
+
+ Call:
+
+ AH = 57H
+ AL = Function code
+  0 = Get date and time
+  1 = Set date and time
+ BX
+  Handle
+ CX (if AL = 1)
+  Time to be set
+ DX (if AL = 1)
+  Date to be set
+
+ Return:
+
+ Carry set:
+ AX
+  1 = Invalid function
+  6 = Invalid handle
+ Carry not set:
+ CX (if AL = 0)
+  Time file last written
+ DX (if AL = 0)
+  Date file last written
+
+
+Comments:
+
+Function 57H gets or sets the time and date when a file was last written.
+To get the time and date, AL must contain 0; the time and date return in
+CX and DX. To set the time and date, AL must contain 1; CX and DX
+must contain the time and date. BX must contain the file handle. The time
+and date are in the form described in "Fields of the FCB" in Section 1.9.1.
+
+If there is an error, the carry flag (CF) is set and the error code returns in
+AX:
+
+Code
+ Meaning
+_ ________________________________________________________________
+
+1 AL not 0 or 1
+
+6 Handle in BX invalid or not open
+
+
+
+  5
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Macro Definition:
+
+
+get_set_date_time macro handle,action,time,date
+   mov bx,handle
+   mov al,action
+   mov cx,word ptr time
+   mov dx,word ptr date
+   mov ah,57H
+   int 21H
+   endm
+
+
+Example:
+
+The following program gets the date of a file named report.asm in the
+current directory on the disk in drive B, increments the day, increments
+the month and/or year, if necessary, and sets the new date of the file.
+
+month db 31,28,31,30,31,30,31,31,30,31,30,31
+path db "b:report.asm",0
+handle dw ?
+time db 2 dup (?)
+date db 2 dup (?)
+;
+begin: open_handle path,0 ;See Function 3DH
+ mov handle,ax ;Save handle
+ get_set_date_time handle,0,time,date ;THIS FUNCTION
+ jc error_time ;Routine not shown
+ mov word ptr time,cx ;Save time
+ mov word ptr date,dx ;Save date
+ convert_date date[-24] ;See end of chapter
+ inc dh ;Increment day
+ xor bx,bx ;To use BL as index
+ mov bl,dl ;Get month
+ cmp dh,month[bx-1] ;Past last day?
+ jle month_ok ;No, go home
+ mov dh,1 ;Yes, set day to 1
+ inc dl ;Increment month
+ cmp dl,12 ;Is it past December?
+ jle month_ok ;No, go home
+ mov dl,1 ;Yes, set month to 1
+ inc cx ;Increment year
+month_ok: pack_date date ;See end of chapter
+ get_set_date_time handle,1,time,date ;THIS FUNCTION
+ jc error_time ;Routine not shown
+ close_handle handle ;See Function 3EH
+ jc error_close ;Routine not shown
+
+
+
+6
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Get/Set Allocation Strategy (Function 58H)
+
+ Call:
+
+ AH = 58H
+ AL
+  0 = Get strategy
+  1 = Set strategy
+ BX (AL = 1)
+  0 = First fit
+  1 = Best fit
+  2 = Last fit
+
+ Return:
+
+ Carry set:
+ AX
+  1 = Invalid function code
+ Carry not set:
+ AX (AL = 0)
+  0 = First fit
+  1 = Best fit
+  2 = Last fit
+
+
+Comments:
+
+Function 58H gets or sets the strategy that MS-DOS uses to allocate
+memory when a process requests it. If AL contains 0, the strategy is
+returned in AX. If AL contains 1, BX must contain the strategy. The three
+possible strategies are:
+
+
+
+  7
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+Table 0.1
+
+Allocation Strategy
+
+_ _________________________________________________________________________
+
+Value  Name  Description 
+
+_ _________________________________________________________________________
+
+0  First fit   
+
+ MS-DOS starts searching at the lowest available block and
+ allocates the first block it finds (the allocated memory is the
+ lowest available block). This is the default strategy.
+
+1  Best fit   
+
+ MS-DOS searches each available block and allocates the
+ smallest available block that satisfies the request.
+
+2  Last fit   
+
+ MS-DOS starts searching at the highest available block and
+ allocates the first block it finds (the allocated memory is the
+ highest available block).
+
+_ _________________________________________________________________________
+
+You can use this function request to control how MS-DOS uses its memory
+resources.
+
+If there is an error, the carry flag (CF) is set and the error code returns in
+AX:
+
+Code
+ Meaning
+_ ________________________________________________________________
+
+1 AL doesn't contain 0 or 1, or BX doesn't contain 0, 1, or 2.
+
+
+Macro Definition:
+
+
+alloc_strat macro code,strategy
+  mov bx,strategy
+  mov al,code
+  mov ah,58H
+  int 21H
+  endm
+
+
+Example:
+
+The following program displays the memory-allocation strategy in effect,
+then forces subsequent memory allocations to the top of memory by set-
+ting the strategy to last fit (code 2).
+
+get equ 0
+set equ 1
+stdout equ 1
+last_fit equ 2
+;
+first db "First fit ",0DH,0AH
+best db "Best fit ",0DH,0AH
+last db "Last fit ",0DH,0AH
+
+8
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+;
+begin: alloc_strat get ;THIS FUNCTION
+ jc alloc_error ;routine not shown
+ mov cl,4 ;multiply code by 16
+ shl ax,cl ;to calculate offset
+ mov dx,offset first ;point to first msg
+ add dx,ax ;add to base address
+ mov bx,stdout ;handle for write
+ mov cs,16 ;write 16 bytes
+ mov ah,40h ;write handle
+ int 21H ;system call
+; jc write_error ;routine not shown
+ alloc_strat set,last_fit ;THIS FUNCTION
+; jc alloc_error ;routine not shown
+
+
+
+  9
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Get Extended Error (Function 59H)
+
+ Call:
+
+ AH = 59H
+ BX = 0
+
+ Return:
+
+ AX
+  Extended-error code
+ BH
+  Error class (see text)
+ BL
+  Suggested action (see text)
+ CH
+  Locus (see text)
+
+ CL, DX, SI, DI, DS, ES destroyed
+
+
+
+Comments:
+
+Function 59H retrieves an extended-error code for the preceding system
+call. Each release of MS-DOS extends the error codes to cover new capabil-
+ities. These new codes are mapped to a simpler set of error codes based on
+MS-DOS Version 2.0, so that existing programs can continue to operate
+correctly. Note that this call destroys all registers except CS:IP and
+SS:SP.
+
+A user-written Interrupt 24H (Critical-Error Handler Address) can use
+Function 59H to get detailed information about the error that caused the
+interrupt to be issued.
+
+The input BX is a version indicator that specifies for what level of error
+handling the application was written. The current level is 0.
+
+The extended-error code consists of four separate codes in AX, BH, BL,
+and CH that give as much detail as possible about the error and suggest
+how the issuing program should respond.
+
+
+10
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+BH\(emError Class
+
+BH returns a code that describes the class of error that occurred:
+
+Class
+ Description
+_ ________________________________________________________________
+
+1 Out of a resource, such as storage or channels
+
+2 Not an error, but a temporary situation (such as a locked region in
+ a file) that is expected to end
+
+3 Authorization problem
+
+4 Internal error in system software
+
+5 Hardware failure
+
+6 System software failure not the fault of the active process (could be
+ caused by missing or incorrect configuration files, for example)
+
+7 Application program error
+
+8 File or item not found
+
+9 File or item of invalid format or type, or that is otherwise invalid
+ or unsuitable
+
+10 Interlocked file or item
+
+11 Wrong disk in drive, bad spot on disk, or other problem with
+ storage medium
+
+12 Other error
+
+
+
+  11
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+BL\(emSuggested Action
+
+BL returns a code that suggests how the issuing program can respond to
+the error:
+
+Action
+ Description
+_ ________________________________________________________________
+
+1 Retry, then prompt user
+
+2 Retry after a Pause
+
+3 If user entered data such as drive letter or filename, prompt for it
+ again
+
+4 Terminate with cleanup
+
+5 Terminate immediately; system so unhealthy that program should
+ exit as soon as possible without taking time to close files and
+ update indexes
+
+6 Error is informational
+
+7 Prompt user to perform some action, such as changing disks, then
+ retry operation
+
+
+CH\(emLocus
+
+CH returns a code that provides additional information to help locate the
+area involved in the failure. This code is particularly useful for hardware
+failures (BH=5).
+
+Locus
+ Description
+_ ________________________________________________________________
+
+1 Unknown
+
+2 Related to random-access block devices, such as a disk drive
+
+3 Related to Network
+
+4 Related to serial-access character devices, such as a printer
+
+5 Related to random-access memory
+
+Your programs should handle errors by noting the error return from the
+original system call and then issuing this system call to get the extended-
+error code. If the program does not recognize the extended-error code, it
+should respond to the original error code.
+
+This system call is available during Interrupt 24H and may be used to
+return network-related errors.
+
+
+12
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Macro Definition:
+
+
+get_error macro
+  mov ah, 59H
+  int 21H
+  endm
+
+
+Example:
+
+Since this function request provides such detailed information, a general
+example is not practical. User programs can interpret the various codes to
+determine what sort of messages or prompts should be displayed, what
+action to take, and whether to terminate the program if recovery from the
+errors isn't possible.
+
+
+  13
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Create Temporary File (Function 5AH)
+
+ Call:
+
+ AH = 5AH
+ CX
+  Attribute
+ DS:DX
+  Pointer to pathname, followed by a
+  byte of 0, and then by 13 bytes of memory
+
+ Return:
+
+ Carry set:
+ AX
+  2 = File not found
+  3 = Path not found
+  4 = Too many open files
+  5 = Access denied
+ Carry not set:
+ AX
+  Handle
+
+
+Comments:
+
+Function 5AH creates a file with a unique name. DX must contain the
+offset (from the segment address in DS) of an ASCIZ string that specifies a
+pathname and 13 bytes of memory (to hold the filename). CX must con-
+tain the attribute to be assigned to the file, as described in Section 1.5.5,
+"File Attributes," earlier in this chapter.
+
+MS-DOS creates a unique filename and appends it to the pathname
+pointed to by DS:DX, creates the file and opens it in compatibility mode,
+then returns the file handle in AX. A program that needs a temporary file
+should use this function request to avoid name conflicts.
+
+When the creating process exits, MS-DOS does not automatically delete a
+file created with Function 5AH. When you no longer need the file you
+should delete it.
+
+If there is an error, the carry flag (CF) is set and the error code returns in
+AX:
+
+Code
+ Meaning
+_ ________________________________________________________________
+
+2 File is invalid or doesn't exist
+
+
+
+14
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+3 Directory pointed to by DS:DX is invalid or doesn't exist
+
+4 Too many open files (no handle available)
+
+5 Access denied
+
+
+Macro Definition:
+
+
+create_temp macro pathname,attrib
+  mov cx,attrib
+  mov dx,offset pathname
+  mov ah,5AH
+  int 21H
+  endm
+
+
+
+  15
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Example:
+
+The following program creates a temporary file in the directory named
+\wp\docs, copies a file named textfile.asc that is in the current directory
+into the temporary file, and then closes both files.
+
+stdout equ 1
+;
+file db "TEXTFILE.ASC",0
+path db "\WP\DOCS",0
+temp db 13 dup (0)
+open_msg db " opened.",0DH,0AH
+crl_msg db " created.",0DH,0AH
+rd_msg db " read into buffer.",0DH,0AH
+wr_msg db "Buffer written to "
+cl_msg db "Files closed.",0DH,0AH
+crlf db 0DH,0AH
+handle1 dw ?
+handle2 dw ?
+buffer db 512 dup (?)
+;
+begin: open_handle file,0 ;see Function 3DH
+ jc open_error ;routine not shown
+ mov handle1,ax ;save handle
+ write_handle stdout,file,12 ;see Function 40H
+ jc write_error ;routine not shown
+ write_handle stdout,open_msg,10 ;see Function 40H
+ jc write_error ;routine not shown
+ create_temp path,0 ;THIS FUNCTION
+ jc create_error ;routine not shown
+ mov handle2,ax ;save handle
+ write_handle stdout,path,8 ;see Function 40H
+ jc write_error ;routine not shown
+ display_char "
+ write_handle stdout,temp,12 ;see Function 40H
+ jc write_error ;routine not shown
+ write_handle stdout,crl_msg,11 ;See Function 40H
+ jc write_error ;routine not shown
+ read_handle handle1,buffer,512 ;see Function 3FH
+ jc read_error ;routine not shown
+ write_handle stdout,file,12 ;see Function 40H
+ jc write_error ;routine not shown
+ write_handle stdout,rd_msg,20 ;see Function 40H
+ jc write_error ;routine not shown
+ write_handle handle2,buffer,512 ;see Function 40H
+ jc write_error ;routine not shown
+ write_handle stdout,wr_msg,18 ;see Function 40H
+ jc write_error ;routine not shown
+ write_handle stdout,temp,12 ;see Function 40H
+ jc write_error ;routine not shown
+ write_handle stdout,crlf,2 ;see Function 40H
+ jc write_error ;routine not shown
+ close_handle handle1 ;see Function 3EH
+ jc close_error ;routine not shown
+ close_handle handle2 ;see Function 3EH
+
+16
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+ jc close_error ;routine not shown
+ write_handle stdout,cl_msg,15 ;see Function 40H
+ jc write_error ;routine not shown
+
+
+
+  17
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Create New File (Function 5BH)
+
+ Call:
+
+ AH = 5BH
+ CX
+  Attribute
+ DS:DX
+  Pointer to pathname
+
+ Return:
+
+ Carry set:
+ AX
+  2 = File not found
+  3 = Path not found
+  4 = Too many open files
+  5 = Access denied
+  80 = File already exists
+ Carry not set:
+ AX
+  Handle
+
+
+Comments:
+
+Function 5BH creates a new file. DX must contain the offset (from the seg-
+ment address in DS) of an ASCIZ string that specifies a pathname. CX con-
+tains the attribute to be assigned to the file, as described in Section 1.5.5,
+"File Attributes."
+
+If there is no existing file with the same filename, MS-DOS creates the file,
+opens it in compatibility mode, and returns the file handle in AX.
+
+This function request fails if the specified file exists, unlike Function 3CH
+(Create Handle), which, under the same circumstances, truncates the file
+to a length of 0. In a multitasking system, the existence of a file is used as
+a semaphore; you can use this system call as a test-and-set semaphore.
+
+
+
+18
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+If there is an error, the carry flag (CF) is set and the error code returns in
+AX:
+
+Code
+ Meaning
+_ ________________________________________________________________
+
+2 File is invalid or doesn't exist
+
+3 Directory pointed to by DS:DX is invalid or doesn't exist
+
+4 No free handles are available in the current process, or internal
+ system tables are full
+
+5 Access denied
+
+80 File with the same specification pointed to by DS:DX already exists
+
+
+Macro Definition:
+
+
+create_new macro pathname,attrib
+  mov cx, attrib
+  mov dx, offset pathname
+  mov ah, 5BH
+  int 21H
+  endm
+
+
+Example:
+
+The following program attempts to create a new file named report.asm in
+the current directory. If the file already exists, the program displays an
+error message and returns to MS-DOS. If the file doesn't exist and there
+are no other errors, the program saves the handle and continues process-
+ing.
+
+err_msg db "FILE ALREADY EXISTS",0DH,0AH,"$"
+path db "report.asm",0
+handle dw ?
+;
+begin: create_new path,0 ;THIS FUNCTION
+ jnc continue ;further processing
+ cmp ax,80 ;file already exist?
+ jne error ;routine not shown
+ display err_msg ;see Function 09H
+ jmp return ;return to MS-DOS
+continue: mov handle,ax ;save handle
+;
+; (further processing here)
+
+
+
+  19
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Lock (Function 5CH, Code 00H)
+
+ Call:
+
+ AH = 5CH
+ AL = 00H
+ BX
+  Handle
+ CX:DX
+  Offset of region to be locked
+ SI:DI
+  Length of region to be locked
+
+ Return:
+
+ Carry set:
+ AX
+  1 = Invalid function code
+  6 = Invalid handle
+  33 = Lock violation
+  36 = Sharing buffer exceeded
+ Carry not set:
+  No error
+
+
+Comments:
+
+Function 5CH, Code 00H, denies all access (read or write) by any other
+process to the specified region of the file. BX must contain the handle of
+the file that contains the region to be locked. CX:DX (a four-byte integer)
+must contain the offset in the file of the beginning of the region. SI:DI (a
+four-byte integer) must contain the length of the region.
+
+If another process attempts to use (read or write) a locked region, MS-DOS
+retries three times; if the retries fail, MS-DOS issues Interrupt 24H for the
+requesting process. You can change the number of retries with Function
+44H, Code 0BH (IOCtl Retry).
+
+The locked region can be anywhere in the file. For instance, locking
+beyond the end of the file is not an error. A region should be locked for
+only a brief period, so if it is locked for more than ten seconds you should
+consider it to be an error.
+
+Function 45H (Duplicate File Handle) and Function 46H (Force Duplicate
+File Handle) duplicate access to any locked region. Passing an open file to
+a child process with Function 4BH, Code 00H (Load and Execute Program)
+does not duplicate access to locked regions.
+
+_ ________________________________________________________________
+
+20
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+Warning 
+
+ If a program closes a file that contains a locked region or terminates
+ with an open file that contains a locked region, the result is undefined.
+
+_ ________________________________________________________________
+
+Programs that might be terminated by Interrupt 23H (CONTROL-C Handler
+Address) or Interrupt 24H (Critical-Error-Handler Address) should trap
+these interrupts and unlock any locked regions before exiting.
+
+Programs should not rely on being denied access to a locked region. A
+program can determine the status of a region (locked or unlocked) by
+attempting to lock the region and examining the error code.
+
+If there is an error, the carry flag (CF) is set and the error code is returned
+in AX:
+
+Code
+ Meaning
+_ ________________________________________________________________
+
+1 File sharing must be loaded to use this function request.
+
+6 The handle in BX is not a valid, open handle.
+
+33 All or part of the specified region is already locked.
+
+36 There is no more room for lock entries in the buffer. Refer to the
+ share command in the MS-DOS User's Reference for information
+ on allocating more lock entries.
+
+
+Macro Definition:
+
+
+lock macro handle,start,bytes
+ mov bx, handle
+ mov cx, word ptr start
+ mov dx, word ptr start+2
+ mov si, word ptr bytes
+ mov di, word ptr bytes+2
+ mov al, 0
+ mov ah, 5CH
+ int 21H
+ endm
+
+
+
+  21
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Example:
+
+The following program opens a file named finalrpt in "Deny None" mode
+and locks two portions of it: the first 128 bytes and bytes 1024 through
+5119. After some (unspecified) processing, it unlocks the same portions and
+closes the file.
+
+stdout equ 1
+;
+start1 dd 0
+lgth1 dd 128
+start2 dd 1023
+lgth2 dd 4096
+file db "FINALRPT",0
+op_msg db " opened.",0DH,0AH
+11_msg db "First 128 bytes locked.",0DH,0AH
+12_msg db "Bytes 1024-5119 locked.",0DH,0AH
+u1_msg db "First 128 bytes unlocked.",0DH,0AH
+u2_msg db "Bytes 1024-5119 unlocked.",0DH,0AH
+cl_msg db " closed.:,0DH,0AH
+handle dw ?
+;
+begin: open_handle file,01000010b ;see Function 3DH
+ jc open_error ;routine not shown
+ write_handle stdout,file,8 ;see Function 40H
+ jc write_error ;routine not shown
+ write_handle stdout,op_msg,10 ;see Function 40H
+ jc write_error ;routine not shown
+ mov handle,ax ;save handle
+ lock handle,start1,lgth1 ;THIS FUNCTION
+ jc lock_error ;routine not shown
+ write_handle stdout,11_msg,25 ;see Function 40H
+ jc write_error ;routine not shown
+ lock handle,start2,lgth2 ;THIS FUNCTION
+ jc lock_error ;routine not shown
+ write_handle stdout,12_msg,25 ;see Function 40H
+ jc write_error ;routine not shown
+;
+; ( Further processing here )
+;
+ unlock handle,start1,lgth1 ;See Function 5C01H
+ jc unlock_error ;routine not shown
+ write_handle stdout,ul_msg,27 ;see Function 40H
+ jc write_error ;routine not shown
+ unlock handle,start2,lgth2 ;See Function 5C01H
+ jc unlock_error ;routine not shown
+ write_handle stdout,u2_msg,27 ;See Function 40H
+ jc write_error ;routine not shown
+ close_handle handle ;See Function 3EH
+ jc close_error ;routine not shown
+ write_handle stdout,file,8 ;see Function 40H
+ jc write_error ;routine not shown
+ write_handle stdout,cl_msg,10 ;see Function 40H
+ jc write_error ;routine not shown
+
+
+22
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Unlock (Function 5CH, Code 01H)
+
+ Call:
+
+ AH = 5CH
+ AL = 01H
+ BX
+  Handle
+ CX:DX
+  Offset of area to be unlocked
+ SI:DI
+  Length of area to be unlocked
+
+ Return:
+
+ Carry set:
+ AX
+  1 = Invalid function code
+  6 = Invalid handle
+  33 = Lock violation
+  36 = Sharing buffer exceeded
+ Carry not set:
+  No error
+
+
+Comments:
+
+Function 5CH, Code 01H, unlocks a region previously locked by the same
+process. BX must contain the handle of the file that contains the region to
+be unlocked. CX:DX (a four-byte integer) must contain the offset in the file
+of the beginning of the region. SI:DI (a four-byte integer) must contain the
+length of the region. The offset and length must be exactly the same as the
+offset and length specified in the previous Function 5CH, Code 00H (Lock).
+
+The description of Function 5CH, Code 00H (Lock) describes how to use
+locked regions.
+
+
+
+  23
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+If there is an error, the carry flag (CF) is set and the error code returns in
+AX:
+
+Code
+ Meaning
+_ ________________________________________________________________
+
+1 File sharing must be loaded to use this function request.
+
+6 The handle in BX is not a valid, open handle.
+
+33 The region specified is not identical to one that was previously
+ locked by the same process.
+
+36 There is no more room for lock entries in the buffer. Refer to the
+ share command in the MS-DOS User's Reference for information
+ on allocating more lock entries.
+
+You should issue Function 59H (Get Extended Error) to list the possible
+errors returned by this function.
+
+Macro Definition:
+
+
+unlock macro handle,start,bytes
+ mov bx, handle
+ mov cx, word ptr start
+ mov dx, word ptr start+2
+ mov si, word ptr bytes
+ mov di, word ptr bytes+2
+ mov al, 1
+ mov ah, 5CH
+ int 21H
+ endm
+
+
+Example:
+
+The following program opens a file named finalrpt in "Deny None" mode
+and locks two portions of it: the first 128 bytes and bytes 1024 through
+5119. After some (unspecified) processing, it unlocks the same portions and
+closes the file.
+
+stdout equ 1
+;
+start1 dd 0
+lgth1 dd 128
+start2 dd 1023
+lgth2 dd 4096
+file db "FINALRPT",0
+op_msg db " opened.",0DH,0AH
+11_msg db "First 128 bytes locked.",0DH,0AH
+12_msg db "Bytes 1024-5119 locked.",0DH,0AH
+u1_msg db "First 128 bytes unlocked.",0DH,0AH
+u2_msg db "Bytes 1024-5119 unlocked.",0DH,0AH
+
+24
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+cl_msg db " closed.",0DH,0AH
+handle dw ?
+;
+begin: open_handle file,01000010b ;see Function 3DH
+ jc open_error ;routine not shown
+ write_handle stdout,file,8 ;see Function 40H
+ jc write_error ;routine not shown
+ write_handle stdout,op_msg,10 ;see Function 40H
+ jc write_error ;routine not shown
+ mov handle,ax ;save handle
+ lock handle,start1,lgth1 ;See Function 5C00H
+ jc lock_error ;routine not shown
+ write_handle stdout,11_msg,25 ;see Function 40H
+ jc write_error ;routine not shown
+ lock handle,start2,lgth2 ;See Function 5C00H
+ jc lock_error ;routine not shown
+ write_handle stdout,12_msg,25 ;see Function 40H
+ jc write_error ;routine not shown
+;
+; ( Further processing here )
+;
+ unlock handle,start1,lgth1 ;THIS FUNCTION
+ jc unlock_error ;routine not shown
+ write_handle stdout,u1_msg,27 ;see Function 40H
+ jc write_error ;routine not shown
+ unlock handle,start2,lgth2 ;THIS FUNCTION
+ jc unlock_error ;routine not shown
+ write_handle stdout,u2_msg,27 ;see Function 40H
+ jc write_error ;routine not shown
+ close_handle handle ;See Function 3EH
+ jc close_error ;routine not shown
+ write_handle stdout,file,8 ;see Function 40H
+ jc write_error ;routine not shown
+ write_handle stdout,cl_msg,10 ;see Function 40H
+ jc write_error ;routine not shown
+
+
+
+  25
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Get Machine Name (Function 5EH, Code 00H)
+
+ Call:
+
+ AH = 5EH
+ AL = 0
+ DS:DX
+  Pointer to 16-byte buffer
+
+ Return:
+
+ Carry set:
+ AX
+  1 = Invalid function code
+ Carry not set:
+ CX
+  Identification number of local
+  computer
+
+
+
+Comments:
+
+Function 5EH, Code 0, retrieves the net name of the local computer. DX
+must contain the offset (to the segment address in DS) of a 16-byte buffer.
+Microsoft Networks must be running.
+
+MS-DOS returns the local computer name (a 16-byte ASCIZ string, padded
+with blanks) in the buffer pointed to by DS:DX. CX returns the
+identification number of the local computer. If the network was never
+installed, the CH register returns with zero and the value in the CL regis-
+ter is invalid.
+
+If there is an error, the carry flag (CF) is set and the error code returns in
+AX:
+
+Code
+ Meaning
+_ ________________________________________________________________
+
+1 Microsoft Networks must be running to use this function request.
+
+
+
+26
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Macro Definition:
+
+
+get_machine_name macro buffer
+   mov dx,offset buffer
+   mov al,0
+   mov ah,5EH
+   int 21H
+   endm
+
+
+Example:
+
+The following program displays the name of a Microsoft Networks work-
+station.
+
+stdout equ 1
+;
+msg db "Netname: "
+mac_name db 16 dup (?),0DH,0AH
+;
+begin: get_machine_name mac_name ;THIS FUNCTION
+ jc name_error ;routine not shown
+ write_handle stdout,msg,27 ;see Function 40H
+ jc write_error ;routine not shown
+
+
+
+  27
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Printer Setup (Function 5EH, Code 02H)
+
+ Call:
+
+ AH = 5EH
+ AL = 02H
+ BX
+  Assign-list index
+ CX
+  Length of setup string
+
+ DS:SI
+  Pointer to setup string
+
+ Return:
+
+ Carry set:
+ AX
+  1 = Invalid function code
+ Carry not set:
+  No error
+
+
+Comments:
+
+Function 5EH, Code 02H, defines a string of control characters that
+MS-DOS adds to the beginning of each file sent to the network printer. BX
+must contain the index into the assign list that identifies the printer (entry
+0 is the first entry). CX must contain the length of the string. SI must con-
+tain the offset (to the segment address in DS) of the string itself. Microsoft
+Networks must be running.
+
+MS-DOS adds the setup string to the beginning of each file sent to the
+printer, which is specified by the assign-list index in BX. This function
+request lets each program that shares a printer have its own printer
+configuration. You can use Function 5F02H (Get Assign-List Entry) to
+determine which entry in the assign list refers to the printer.
+
+If there is an error, the carry flag (CF) is set and the error code returns in
+AX:
+
+Code
+ Meaning
+_ ________________________________________________________________
+
+1 Microsoft Networks must be running to use this function request.
+
+
+
+28
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Macro Definition:
+
+
+printer_setup macro index,lgth,string
+  mov bx, index
+  mov cx, lgth
+  mov dx, offset string
+  mov al, 2
+  mov ah, 5EH
+  int 21H
+  endm
+
+
+Example:
+
+The following program defines a printer-setup string that consists of the
+control character to print expanded type on Epson-compatible printers.
+The printer cancels this mode at the first carriage return, so the effect is to
+print the first line of each file sent to the network printer as a title in
+expanded characters. The setup string is one character. This example
+assumes that the printer is the entry number 3 (the fourth entry) in the
+assign list. Use Function 5F02H (Get Assign-List Entry) to determine this
+value.
+
+setup db 0EH
+;
+begin: printer_setup 3,1,setup ;THIS FUNCTION
+ jc error ;routine not shown
+
+
+
+  29
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Get Assign-List Entry (Function 5FH, Code
+02H)
+
+ Call:
+
+ AH = 5FH
+ AL = 02H
+ BX
+  Assign-list index
+ DS:SI
+  Pointer to buffer for local name
+ ES:DI
+  Pointer to buffer for remote name
+
+ Return:
+
+ Carry set:
+ AX
+  1 = Invalid function code
+  18 = No more files
+ Carry not set:
+ BL
+  3 = Printer
+  4 = Drive
+ CX
+  Stored user value
+
+
+Comments:
+
+Function 5FH, Code 02H, retrieves the specified entry from the network
+list of assignments. BX must contain the assign-list index (entry 0 is the
+first entry). SI must contain the offset (to the segment address in DS) of a
+16-byte buffer for the local name. DI must contain the offset (to the seg-
+ment address in ES) of a 128-byte buffer for the remote name. Microsoft
+Networks must be running.
+
+MS-DOS puts the local name in the buffer pointed to by DS:SI and the
+remote name in the buffer pointed to by ES:DI. The local name can be a
+null ASCIZ string. BL returns 3 if the local device is a printer or 4 if the
+local device is a drive. CX returns the stored user value set with Function
+5F03H (Make Assign-List Entry). The contents of the assign list can
+change between calls.
+
+You can use this function request to retrieve any entry, or to make a copy
+of the complete list by stepping through the table. To detect the end of
+the assign list, check for error code 18 (no more files), as you would when
+stepping through a directory by using Functions 4EH (Find First File) and
+
+30
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+4FH (Find Next File).
+
+If there is an error, the carry flag (CF) is set and the error code returns in
+AX:
+
+Code
+ Meaning
+_ ________________________________________________________________
+
+1 Microsoft Networks must be running to use this function request.
+
+18 The index passed in BX is greater than the number of entries in the
+ assign list.
+
+
+Macro Definition:
+
+
+get_list macro index,local,remote
+  mov bx, index
+  mov si, offset local
+  mov di, offset remote
+  mov al,2
+  mov ah, 5FH
+  int 21H
+  endm
+
+
+Example:
+
+The following program displays the assign list on a Microsoft Networks
+workstation, showing the local name, remote name, and device type (drive
+or printer) for each entry.
+
+stdout equ 1
+printer equ 3
+;
+local_nm db 16 dup (?),2 dup (20h)
+remote_nm db 128 dup (?),2 dup (20h)
+header db "Local name",8 dup (20h)
+ db "Remote name",7 dup (20h)
+ db "Device Type"
+crlf db 0dh,0ah,0dh,0ah
+drive_msg db "drive"
+print_msg db "printer"
+index dw ?
+;
+begin: write_handle stdout,header,51 ;see Function 40H
+ jc write_error ;routine not shown
+ mov index,0 ;assign list index
+ck_list: get_list index,local_nm,remote_nm ;THIS FUNCTION
+ jnc got_one ;got an entry
+error: cmp ax,18 
+ je last_one ;yes
+ jmp error ;routine not shown
+got_one: push bx ;save device type
+
+  31
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+ write_handle stdout,local_nm,148 ;see Function 40H
+ jc write_error ;routine not shown
+ pop bx ;get device type
+ cmp bl,printer ;is it a printer?
+ je prntr ;yes
+ write_handle stdout,drive_msg,5 ;see Function 40H
+ jc write_error ;routine not shown
+ jmp get_next ;finish message
+prntr: write_handle stdout,print_msg,7 ;see Function 40H
+ jc write_error ;routine not shown
+get_next: write_handle stdout,crlf,2 ;see Function 40H
+ jc write_error ;routine not shown
+ inc index ;bump index
+ jmp ck_list ;get next entry
+last_one: write_handle stdout,crlf,4 ;see Function 40H
+ jc write_error ;routine not shown
+;
+
+
+
+32
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Make Assign-List Entry (Function 5FH, Code
+03H)
+
+ Call:
+
+ AH = 5FH
+ AL = 03H
+ BL
+  3 = Printer
+  4 = Drive
+ CX
+  User value
+ DS:SI
+  Pointer to name of source device
+ ES:DI
+  Pointer to name of destination
+  device
+
+ Return:
+
+ Carry set:
+ AX
+  1 = Invalid function code
+  5 = Access denied
+  3 = Path not found
+  8 = Insufficient memory
+  (Other errors particular to the
+  network may occur.)
+ Carry not set:
+  No error
+
+
+Comments:
+
+Function 5FH, Code 03H, redirects a printer or disk drive (source device)
+to a network directory (destination device). BL must contain 3 if the
+source device is a printer or 4 if it is a disk drive. SI must contain the
+offset (to the segment address in DS) of an ASCIZ string that specifies the
+name of the printer, or a drive letter followed by a colon, or a null string
+(one byte of 00H). DI must contain the offset (to the segment address in
+ES) of an ASCIZ string that specifies the name of a network directory. CX
+contains a user-specified 16-bit value that MS-DOS maintains. Microsoft
+Networks must be running.
+
+The destination string must be an ASCIZ string of the following form:
+
+machine-name pathname 00H password 00H
+
+
+  33
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+where:
+
+Machine-name is the net name of the server that contains the network
+directory;
+
+Pathname is the alias of the network directory (not the directory path) to
+which the source device is to be redirected;
+
+00H is a null byte; and
+
+Password is the password for access to the network directory. If no pass-
+word is specified, both null bytes must immediately follow the pathname.
+
+If BL=3, the source string must be PRN, LPT1, LPT2, or LPT3. This
+function buffers and sends all output for the named printer to the remote-
+printer spooler named in the destination string.
+
+If BL=4, the source string can be either a drive letter followed by a colon,
+or a null string. If the source string contains a valid drive letter and colon,
+this call redirects all subsequent drive-letter references to the network
+directory named in the destination string. If the source string is a null
+string, MS-DOS attempts to grant access to the network directory with
+the specified password.
+
+The maximum length of the destination string is 128 bytes. You can
+retrieve the value in CX by using Function 5FH, Code 02H (Get Assign-
+List Entry).
+
+If there is an error, the carry flag (CF) is set and the error code returns in
+AX:
+
+Code
+ Meaning
+_ ________________________________________________________________
+
+1 Microsoft Networks must be running to use this function request;
+ the value in BX is not 1 to 4, the source string is in the wrong for-
+ mat; the destination string is in the wrong format; or the source
+ device is already redirected.
+
+3 The network directory path is invalid or doesn't exist.
+
+5 The network directory/password combination is not valid. This
+ does not mean that the password itself was invalid; the directory
+ might not exist on the server.
+
+8 There is not enough memory for string substitutions.
+
+
+
+34
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Macro Definition:
+
+
+redir macro device,value,source,destination
+ mov bl, device
+ mov cx, value
+ mov si, offset source
+ mov es, seg destination
+ mov di, offset destination
+ mov al, 03H
+ mov ah, 5FH
+ int 21H
+ endm
+
+
+
+  35
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Example:
+
+The following program redirects two drives and a printer from a worksta-
+tion to a server named harold. It assumes the machine name, directory
+names, and driver letters shown:
+
+Local drive Netname
+or printer on server Password
+
+E: WORD none
+F: COMM fred
+PRN: PRINTER quick
+
+printer equ 3
+drive equ 4
+;
+local_1 db "e:",0
+local_2 db "f:",0
+local_3 db "prn",0
+remote_1 db "\harold\word",0,0
+remote_2 db "\harold\comm",0,"fred",0
+remote_3 db "\harold\printer",0,"quick",0
+;
+begin: redir local_1,remote_1,drive,0 ;THIS FUNCTION
+ jc error ;routine not shown
+ redir local_2,remote_2,drive,0 ;THIS FUNCTION
+ jc error ;routine not shown
+ redir local_3,remote_3,printer,0 ;THIS FUNCTION
+ jc error ;routine not shown
+
+
+
+36
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Cancel Assign-List Entry (Function 5FH, Code
+04H)
+
+ Call:
+
+ AH = 5FH
+ AL = 04H
+ DS:SI
+  Pointer to name of source device
+
+ Return:
+
+ Carry set:
+ AX
+  1 = Invalid function code
+  15 = Redirection paused on server
+  (Other errors particular to the network
+  may occur.)
+ Carry not set:
+  No error
+
+
+
+Comments:
+
+Function 5FH, Code 04H, cancels the redirection of a printer or disk drive
+(source device) to a network directory (destination device) made with
+Function 5FH, Code 03H (Make Assign-List Entry). SI must contain the
+offset (to the segment address in DS) of an ASCIZ string that specifies the
+name of the printer or drive whose redirection is to be canceled. Microsoft
+Networks must be running.
+
+The ASCIZ string pointed to by DS:SI can contain one of three values:
+
+ o The letter of a redirected drive, followed by a colon. Cancels the
+ redirection and restores the drive to its physical meaning.
+
+ o The name of a redirected printer (PRN, LPT1, LPT2, LPT3, or
+ their machine-specific equivalents). Cancels the redirection and
+ restores the printer name to its physical meaning.
+
+ o A string starting with \\ (2 backslashes). Terminates the connec-
+ tion between the local machine and the network directory.
+
+If there is an error, the carry flag (CF) is set and the error code returns in
+AX:
+
+Code
+
+  37
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+ Meaning
+_ ________________________________________________________________
+
+1 Microsoft Networks must be running to use this function request;
+ or the ASCIZ string names a nonexistent source device.
+
+15 Disk or printer redirection on the network server is paused.
+
+
+Macro Definition:
+
+
+cancel_redir macro local
+  mov si, offset local
+  mov al, 4
+  mov ah, 5FH
+  int 21H
+  endm
+
+
+Example:
+
+The following program cancels the redirection of drives E and F and the
+printer (PRN) of a Microsoft Networks workstation. It assumes that these
+local devices were redirected previously.
+
+local_1 db "e:",0
+local_2 db "f:",0
+local_3 db "prn",0
+;
+begin: cancel_redir local_1 ;THIS FUNCTION
+ jc error ;routine not shown
+ cancel_redir local_2 ;THIS FUNCTION
+ jc error ;routine not shown
+ cancel_redir local_3 ;THIS FUNCTION
+ jc error ;routine not shown
+
+
+
+38
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Get PSP (Function 62H)
+
+ Call:
+
+ AH = 62H
+
+ Return:
+
+ BX
+  Segment address of the Program
+  Segment Prefix of the current process
+
+
+
+Comments:
+
+Function 62H retrieves the segment address of the currently active process
+(the start of the Program Segment Prefix). The address returns in BX.
+
+Macro Definition:
+
+
+get_psp macro
+ mov ah, 62H
+ int 21H
+ endm
+
+
+Example:
+
+The following program displays the segment address of its Program Seg-
+ment Prefix (PSP) in hexadecimal.
+
+msg db "PSP segment address: H",0DH,0AH,"$"
+;
+begin: get_psp ;THIS FUNCTION
+ convert bx,16,msg[21] ;see end of chapter
+ display msg ;see Function 09H
+
+
+
+  39
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Get Extended Country Information (Function
+65H)
+
+ Call:
+
+ AH = 65H
+ AL
+  Function (minor) code
+ BX
+  Code page (-1 = active CON device)
+ CX
+  Amount of data to return
+ DX
+  Country ID for which information is to be returned
+  (-1=default country)
+ ES:DI
+  Address of country information buffer
+
+ Return:
+
+ 1 = Buffer has been filled
+ 2 = File not found
+
+
+Comments:
+
+Function 65H retrieves standard country information. This information
+includes country ID, code page, date and time format, currency symbol,
+separators (for thousands, decimals, data list, date and time) currency for-
+mat flags, digits in currency, and case-mapping information.
+
+The function code passed in AL may be one of the following:
+
+Code
+ Description
+_ ________________________________________________________________
+
+1 Return standard information
+
+2 Return pointer to uppercase table
+
+3 Return pointer to filename uppercase table
+
+4 Return pointer to collating table
+
+5 Reserved (no entry)
+
+6 Return pointer to collating sequence
+
+
+
+40
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+MS-DOS 3.3 provides more country-dependent information than previous
+versions of MS-DOS. Only the information for the default country is kept
+in the kernel. Country-dependent information for all other countries is
+contained in the country.sys file. The MS-DOS nlsfunc command is used
+to access the country-dependent information in country.sys using this call.
+If the country code and code page number do not match, or if either is
+invalid, error code 2 is returned to AX. If CX is less than 5, error code 1 is
+returned. If the amount of information requested is greater than the value
+of CX, only CX bytes are returned and no error is reported.
+
+If AL = 1, the buffer is filled with the following information:
+
+db 1 ; Information ID
+dw ? ; Size (<=38)
+dw ? ; Country ID
+dw ? ; Code page
+
+If AL = 2, the buffer is filled with the following information:
+
+db 2 ; Information ID
+dd ? ; Double-word pointer to uppercase table
+
+If AL = 4, the buffer is filled with the following information:
+
+db 4 ; Information ID
+dd ? ; Double-word pointer to filename uppercase table
+
+Both of these tables consist of a length field (two bytes) followed by 128
+uppercase values for the upper 128 ASCII characters. The following for-
+mula is used to compute the address of an uppercase equivalent in the
+table:
+
+Address of outchar = inchar - (256-table_len) = table_start
+
+where:
+
+Parameter
+ Meaning
+_ ________________________________________________________________
+
+inchar Character to be generated
+
+table_len Length of list of uppercase values (two bytes)
+
+table_start Starting address of uppercase table
+
+outchar Uppercase value for inchar
+
+If inchar is greater than or equal to (256 - table_len), there is an uppercase
+equivalent in the table; otherwise, there is not.
+
+
+
+  41
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+If AL = 6, the buffer is filled with the following information:
+
+db 6 ; Information ID
+dd ? ; Double-word pointer to collating sequence
+
+The table is 258 bytes long. The first word is the length of the table. The
+rest of the table is 256 ASCII values in the appropriate order.
+
+
+42
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Get/Set Global Code Page (Function 66H)
+
+ Call:
+
+ AH = 66H
+ AL
+  Function (minor) code
+ BX
+  Code page to set (AL = 2)
+
+ Return:
+
+ Carry set:
+ AX 
+  02 = File not found
+  65 = Device not selected
+ Carry not set:
+  No error
+
+
+
+Comments:
+
+Function 66H gets or sets the code page used by the kernel and all devices.
+If no other code page has been set, this function gets the default code page
+from DX. If another code page is set, this function retrieves the active
+code page from BX.
+
+The MS-DOS nlsfunc command and country.sys must be on the system if
+this function is to be used to change the global code page.
+
+The function code may be one of the following:
+
+Code
+ Description
+_ ________________________________________________________________
+
+1 Get code page
+
+2 Set code page
+
+MS-DOS gets the new code page from the country.sys file. Devices must be
+prepared for code page switching before a code page can be selected. To
+prepare a device, a device driver that supports code page switching must
+be installed by using the device command in the config.sys file. The user
+
+  43
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+must also use the prepare keyword with the MS-DOS mode command to
+prepare the device for code page switching.
+
+The code page selected must be compatible with the country code specified
+in the config.sys file. If MS-DOS cannot read country.sys or other specified
+country information file, error code 02 is returned to AX.
+
+
+44
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Set Handle Count (Function 67H)
+
+ Call:
+
+ AH = 67H
+ BX
+  Number of allowed handles
+
+ Return:
+
+ Carry set:
+ AX
+ Carry not set:
+  No error 
+
+
+
+Comments:
+
+Function 67H increases or decreases the number of files a program can
+have open at one time. The maximum number of files handles is 64K. If
+less than 20 are specified, the minimum handle number, 20, is assumed. If
+this call is used to reduce the number of allowed handles, the new limit
+does not take affect until any handles above the new limit are closed.
+
+The user should use Call 4AH (Set Block) to allocate memory for the
+extended handle list if BX is greater than 255. The maximum number for
+the value of the config.sys command files is 255.
+
+
+  45
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Commit File (Function 68H)
+
+ Call:
+
+ AH = 68H
+ BX
+  File handle
+
+ Return:
+
+ Carry set:
+ AX = error
+ Carry not set
+  No error
+
+
+
+Comments:
+
+Function 68H flushes all buffered data for a file without closing it. Using
+this call is more efficient than using the traditional close-open sequence,
+and is more effective for network environments. This call makes sure that
+the disk image of a file is current.
+
+
+46
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+; Macro Definitions for MS-DOS System Call Examples
+;
+;*******************
+; Interrupts
+;*******************
+; Interrupt 25H
+ABS_DISK_READ macro disk,buffer,num_sectors,first_sector
+ mov al,disk
+ mov bx,offset buffer
+ mov cx,num_sectors
+ mov dx,first_sector
+ int 25H
+ popf
+ endm
+; Interrupt 26H
+ABS_DISK_WRITE macro disk,buffer,num_sectors,first_sector
+ mov al,disk
+ mov bx,offset buffer
+ mov cx,num_sectors
+ mov dx,first_sector
+ int 26H
+ popf
+ endm
+; Interrupt 27H
+STAY_RESIDENT macro last_instruc
+ mov dx,offset last_instruc
+ inc dx
+ int 27H
+ endm
+;
+;
+;*******************
+; Function Requests
+;*******************
+; Function Request 00H
+TERMINATE_PROGRAM macro
+ xor ah,ah
+ int 21H
+ endm
+; Function Request 01H
+READ_KBD_AND_ECHO macro
+ mov ah,01H
+ int 21H
+ endm
+; Function Request 02H
+DISPLAY_CHAR macro character
+ mov dl,character
+ mov ah,02H
+ int 21H
+ endm
+; Function Request 03H
+AUX_INPUT macro
+ mov ah,03H
+ int 21H
+ endm
+; Function Request 04H
+
+  47
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+AUX_OUTPUT macro
+ mov ah,04H
+ int 21H
+ endm
+; Function Request 05H
+PRINT_CHAR macro character
+ mov dl,character
+ mov ah,05H
+ int 21H
+ endm
+; Function Request 06H
+DIR_CONSOLE_IO macro switch
+ mov dl,switch
+ mov ah,06H
+ int 21H
+ endm
+; Function Request 07H
+DIR_CONSOLE_INPUT macro
+ mov ah,07H
+ int 21H
+ endm
+; Function Request 08H
+READ_KBD macro
+ mov ah,08H
+ int 21H
+ endm
+; Function Request 09H
+DISPLAY macro string
+ mov dx,offset string
+ mov ah,09H
+ int 21H
+ endm
+; Function Request 0AH
+GET_STRING macro limit,string
+ mov dx,offset string
+ mov string,limit
+ mov ah,0AH
+ int 21H
+ endm
+; Function Request 0BH
+CHECK_KBD_STATUS macro
+ mov ah,0BH
+ int 21H
+ endm
+; Function Request 0CH
+FLUSH_AND_READ_KBD macro switch
+ mov al,switch
+ mov ah,0CH
+ int 21H
+ endm
+; Function Request 0DH
+RESET_DISK macro
+ mov ah,0DH
+ int 21H
+ endm
+; Function Request 0EH
+
+48
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+SELECT_DISK macro disk
+ mov dl,disk[-65]
+ mov ah,0EH
+ int 21H
+ endm
+; Function Request 0FH
+OPEN macro fcb
+ mov dx,offset fcb
+ mov ah,0FH
+ int 21H
+ endm
+; Function Request 10H
+CLOSE macro fcb
+ mov dx,offset fcb
+ mov ah,10H
+ int 21H
+ endm
+; Function Request 11H
+SEARCH_FIRST macro fcb
+ mov dx,offset fcb
+ mov ah,11H
+ int 21H
+ endm
+; Function Request 12H
+SEARCH_NEXT macro fcb
+ mov dx,offset fcb
+ mov ah,12H
+ int 21H
+ endm
+; Function Request 13H
+DELETE macro fcb
+ mov dx,offset fcb
+ mov ah,13H
+ int 21H
+ endm
+; Function Request 14H
+READ_SEQ macro fcb
+ mov dx,offset fcb
+ mov ah,14H
+ int 21H
+ endm
+; Function Request 15H
+WRITE_SEQ macro fcb
+ mov dx,offset fcb
+ mov ah,15H
+ int 21H
+ endm
+; Function Request 16H
+CREATE macro fcb
+ mov dx,offset fcb
+ mov ah,16H
+ int 21H
+ endm
+; Function Request 17H
+RENAME macro fcb,newname
+ mov dx,offset fcb
+
+  49
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+ mov ah,17H
+ int 21H
+ endm
+; Function Request 19H
+CURRENT_DISK macro
+ mov ah,19H
+ int 21H
+ endm
+; Function Request 1AH
+SET_DTA macro buffer
+ mov dx,offset buffer
+ mov ah,1AH
+ endm
+; Function Request 1BH
+DEF_DRIVE_DATA macro
+ mov ah,1BH
+ int 21H
+ endm
+; Function Request 1CH
+DRIVE_DATA macro drive
+ mov dl,drive
+ mov ah,1CH
+ int 21H
+ endm
+; Function Request 21H
+READ_RAN macro fcb
+ mov dx,offset fcb
+ mov ah,21H
+ int 21H
+ endm
+; Function Request 22H
+WRITE_RAN macro fcb
+ mov dx,offset fcb
+ mov ah,22H
+ int 21H
+ endm
+; Function Request 23H
+FILE_SIZE macro fcb
+ mov dx,offset fcb
+ mov ah,23H
+ int 21H
+ endm
+; Function Request 24H
+SET_RELATIVE_RECORD macro fcb
+ mov dx,offset fcb
+ mov ah,24H
+ int 21H
+ endm
+; Function Request 25H
+SET_VECTOR macro interrupt,handler_start
+ mov al,interrupt
+ mov dx,offset handler_start
+ mov ah,25H
+ int 21H
+ endm
+; Function Request 26H
+
+50
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+CREATE_PSP macro seg_addr
+ mov dx,offset seg_addr
+ mov ah,26H
+ int 21H
+ endm
+; Function Request 27H
+RAN_BLOCK_READ macro fcb,count,rec_size
+ mov dx,offset fcb
+ mov cx,count
+ mov word ptr fcb[14],rec_size
+ mov ah,27H
+ int 21H
+ endm
+; Function Request 28H
+RAN_BLOCK_WRITE macro fcb,count,rec_size
+ mov dx,offset fcb
+ mov cx,count
+ mov word ptr fcb[14],rec_size
+ mov ah,28H
+ int 21H
+ endm
+; Function Request 29H
+PARSE macro string,fcb
+ mov si,offset string
+ mov di,offset fcb
+ push es
+ push ds
+ pop es
+ mov al,0FH
+ mov ah,29H
+ int 21H
+ pop es
+ endm
+; Function Request 2AH
+GET_DATE macro
+ mov ah,2AH
+ int 21H
+ endm
+; Function Request 2BH
+SET_DATE macro year,month,day
+ mov cx,year
+ mov dh,month
+ mov dl,day
+ mov ah,2BH
+ int 21H
+ endm
+; Function Request 2CH
+GET_TIME macro
+ mov ah,2CH
+ int 21H
+ endm
+; Function Request 2DH
+SET_TIME macro hour,minutes,seconds,hundredths
+ mov ch,hour
+ mov cl,minutes
+ mov dh,seconds
+
+  51
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+ mov dl,hundredths
+ mov ah,2DH
+ int 21H
+ endm
+; Function Request 2EH
+VERIFY macro switch
+ mov al,switch
+ mov ah,2EH
+ int 21H
+ endm
+; Function Request 2FH
+GET_DTA macro
+ mov ah,2FH
+ int 21H
+ endm
+; Function Request 30H
+GET_VERSION macro
+ mov ah,30H
+ int 21H
+ endm
+; Function Request 31H
+KEEP_PROCESS macro return_code,last_byte
+ mov al,return_code
+ mov dx,offset last_byte
+ mov cl,4
+ shr dx,cl
+ inc dx
+ mov ah,31H
+ int 21H
+ endm
+; Function Request 33H
+CTRL_C_CK macro action,state
+ mov al,action
+ mov dl,state
+ mov ah,33H
+ int 21H
+ endm
+; Function Request 35H
+GET_VECTOR macro interrupt
+ mov al,interrupt
+ mov ah,35H
+ int 21H
+ endm
+; Function Request 36H
+GET_DISK_SPACE macro drive
+ mov dl,drive
+ mov ah,36H
+ int 21H
+ endm
+; Function Request 38H
+GET_COUNTRY macro country,buffer
+ local gc_01
+ mov dx,offset buffer
+ mov ax,country
+ cmp ax,0FFH
+ jl gc_01
+
+52
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+ mov al,0ffh
+ mov bx,country
+gc_01: mov ah,38H
+ int 21H
+ endm
+; Function Request 38H
+SET_COUNTRY macro country
+ local sc_01
+ mov dx,0FFFFH
+ mov ax,country
+ cmp ax,0FFH
+ jl sc_01
+ mov al,0ffh
+ mov bx,country
+sc_01: mov ah,38H
+ int 21H
+ endm
+; Function Request 39H
+MAKE_DIR macro path
+ mov dx,offset path
+ mov ah,39H
+ int 21H
+ endm
+; Function Request 3AH
+REM_DIR macro path
+ mov dx,offset path
+ mov ah,3AH
+ int 21H
+ endm
+; Function Request 3BH
+CHANGE_DIR macro path
+ mov dx,offset path
+ mov ah,3BH
+ int 21H
+ endm
+; Function Request 3CH
+CREATE_HANDLE macro path,attrib
+ mov dx,offset path
+ mov cx,attrib
+ mov ah,3CH
+ int 21H
+ endm
+; Function Request 3DH
+OPEN_HANDLE macro path,access
+ mov dx,offset path
+ mov al,access
+ mov ah,3DH
+ int 21H
+ endm
+; Function Request 3EH
+CLOSE_HANDLE macro handle
+ mov bx,handle
+ mov ah,3EH
+ int 21H
+ endm
+; Function Request 3FH
+
+  53
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+READ_HANDLE macro handle,buffer,bytes
+ mov bx,handle
+ mov dx,offset buffer
+ mov cx,bytes
+ mov ah,3FH
+ int 21H
+ endm
+; Function Request 40H
+WRITE_HANDLE macro handle,buffer,bytes
+ mov bx,handle
+ mov dx,offset buffer
+ mov cx,bytes
+ mov ah,40H
+ int 21H
+ endm
+; Function Request 41H
+DELETE_ENTRY macro path
+ mov dx,offset path
+ mov ah,41H
+ int 21H
+ endm
+; Function Request 42H
+MOVE_PTR macro handle,high,low,method
+ mov bx,handle
+ mov cx,high
+ mov dx,low
+ mov al,method
+ mov ah,42H
+ int 21H
+ endm
+; Function Request 43H
+CHANGE_MODE macro path,action,attrib
+ mov dx,offset path
+ mov al,action
+ mov cx,attrib
+ mov ah,43H
+ int 21H
+ endm
+; Function Request 4400H,01H
+IOCTL_DATA macro code,handle
+ mov bx,handle
+ mov al,code
+ mov ah,44H
+ int 21H
+ endm
+; Function Request 4402H,03H
+IOCTL_CHAR macro code,handle,buffer
+ mov bx,handle
+ mov dx,offset buffer
+ mov al,code
+ mov ah,44H
+ int 21H
+ endm
+; Function Request 4404H,05H
+IOCTL_STATUS macro code,drive,buffer
+ mov bl,drive
+
+54
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+ mov dx,offset buffer
+ mov al,code
+ mov ah,44H
+ int 21H
+ endm
+; Function Request 4406H,07H
+IOCTL_STATUS macro code,handle
+ mov bx,handle
+ mov al,code
+ mov ah,44H
+ int 21H
+ endm
+; Function Request 4408H
+IOCTL_CHANGE macro drive
+ mov bl,drive
+ mov al,08H
+ mov ah,44H
+ int 21H
+ endm
+; Function Request 4409H
+IOCTL_RBLOCK macro drive
+ mov bl,drive
+ mov al,09H
+ mov ah,44H
+ int 21H
+ endm
+; Function Request 440AH
+IOCTL_RHANDLE macro handle
+ mov bx,handle
+ mov al,0AH
+ mov ah,44H
+ int 21H
+ endm
+; Function Request 440BH
+IOCTL_RETRY macro retries,wait
+ mov dx,retries
+ mov cx,wait
+ mov al,0BH
+ mov ah,44H
+ int 21H
+ endm
+; Function Request 440CH
+GENERIC_IOCTL_HANDLES macro handle,function,category,buffer
+ mov ch,05H
+ mov cl,function
+ mov dx,offset buffer
+ mov bx,handle
+ mov ah,44H
+ mov al,0CH
+ int 21H
+ endm
+; Function Request 440DH
+GENERIC_IOCTL_BLOCK macro drive_num,function,category,parm_blk
+ mov ch,08H
+ mov cl,function
+ mov dx,offset parm_blk - 1
+
+  55
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+ mov bx,drive_num
+ mov ah,44H
+ mov al,0DH
+ int 21H
+ endm
+; Function Request 440EH
+IOCTL_GET_DRIVE_MAP macro logical_drv
+ mov bx,logical_drv
+ mov ah,44H
+ mov al,0EH
+ int 21H
+ endm
+; Function Request 440FH
+IOCTL_SET_DRIVE_MAP macro logical_drv
+ mov bx,logical_drv
+ mov ah,44H
+ mov al,0FH
+ int 21H
+ endm
+; Function Request 45H
+XDUP macro handle
+ mov bx,handle
+ mov ah,45H
+ int 21H
+ endm
+; Function Request 46H
+XDUP2 macro handle1,handle2
+ mov bx,handle1
+ mov cx,handle2
+ mov ah,46H
+ int 21H
+ endm
+; Function Request 47H
+GET_DIR macro drive,buffer
+ mov dl,drive
+ mov si,offset buffer
+ mov ah,47H
+ int 21H
+ endm
+; Function Request 48H
+ALLOCATE_MEMORY macro bytes
+ mov bx,bytes
+ mov cl,4
+ shr bx,cl
+ inc bx
+ mov ah,48H
+ int 21H
+ endm
+; Function Request 49H
+FREE_MEMORY macro seg_addr
+ mov ax,seg_addr
+ mov es,ax
+ mov ah,49H
+ int 21H
+ endm
+; Function Request 4AH
+
+56
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+SET_BLOCK macro last_byte
+ mov bx,offset last_byte
+ mov cl,4
+ shr bx,cl
+ add bx,17
+ mov ah,4AH
+ int 21H
+ mov ax,bx
+ shl ax,cl
+ dec ax
+ mov sp,ax
+ mov bp,sp
+ endm
+; Function Request 4B00H
+EXEC macro path,command,parms
+ mov dx,offset path
+ mov bx,offset parms
+ mov word ptr parms[02h],offset command
+ mov word ptr parms[04h],cs
+ mov word ptr parms[06h],5ch
+ mov word ptr parms[08h],es
+ mov word ptr parms[0ah],6ch
+ mov word ptr parms[0ch],es
+ mov al,0
+ mov ah,4BH
+ int 21H
+ endm
+; Function Request 4B03H
+EXEC_OVL macro path,parms,seg_addr
+ mov dx,offset path
+ mov bx,offset parms
+ mov parms,seg_addr
+ mov parms[02H],seg_addr
+ mov al,3
+ mov ah,4BH
+ int 21H
+ endm
+; Function Request 4CH
+END_PROCESS macro return_code
+ mov al,return_code
+ mov ah,4CH
+ int 21H
+ endm
+; Function Request 4DH
+RET_CODE macro
+ mov ah,4DH
+ int 21H
+ endm
+; Function Request 4EH
+FIND_FIRST_FILE macro path,attrib
+ mov dx,offset path
+ mov cx,attrib
+ mov ah,4EH
+ int 21H
+ endm
+; Function Request 4FH
+
+  57
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+FIND_NEXT_FILE macro
+ mov ah,4FH
+ int 21H
+ endm
+; Function Request 54H
+GET_VERIFY macro
+ mov ah,54H
+ int 21H
+ endm
+; Function Request 56H
+RENAME_FILE macro old_path,new_path
+ mov dx,offset old_path
+ push ds
+ pop es
+ mov di,offset new_path
+ mov ah,56H
+ int 21H
+ endm
+; Function Request 57H
+GET_SET_DATE_TIME macro handle,action,time,date
+ mov bx,handle
+ mov al,action
+ mov cx,word ptr time
+ mov dx,word ptr date
+ mov ah,57H
+ int 21H
+ endm
+; Function Request 58H
+ALLOC_STRAT macro code,strategy
+ mov bx,strategy
+ mov al,code
+ mov ah,58H
+ int 21H
+ endm
+; Function Request 59H
+GET_ERROR macro
+ mov ah,59
+ int 21H
+ endm
+; Function Request 5AH
+CREATE_TEMP macro pathname,attrib
+ mov cx,attrib
+ mov dx,offset pathname
+ mov ah,5AH
+ int 21H
+ endm
+; Function Request 5BH
+CREATE_NEW macro pathname,attrib
+ mov cx,attrib
+ mov dx,offset pathname
+ mov ah,5BH
+ int 21H
+ endm
+; Function Request 5C00H
+LOCK macro handle,start,bytes
+ mov bx,handle
+
+58
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+ mov cx,word ptr start
+ mov dx,word ptr start+2
+ mov si,word ptr bytes
+ mov di,word ptr bytes+2
+ mov al,0
+ mov ah,5CH
+ int 21H
+ endm
+; Function Request 5C01H
+UNLOCK macro handle,start,bytes
+ mov bx,handle
+ mov cx,word ptr start
+ mov dx,word ptr start+2
+ mov si,word ptr bytes
+ mov di,word ptr bytes+2
+ mov al,1
+ mov ah,5CH
+ int 21H
+ endm
+; Function Request 5E00H
+GET_MACHINE_NAME macro buffer
+ mov dx,offset buffer
+ mov al,0
+ mov ah,5EH
+ int 21H
+ endm
+; Function Request 5E02H
+PRINTER_SETUP macro index,lgth,string
+ mov bx,index
+ mov cx,lgth
+ mov dx,offset string
+ mov al,2
+ mov ah,5EH
+ int 21H
+ endm
+; Function Request 5F02H
+GET_LIST macro index,local,remote
+ mov bx,index
+ mov si,offset local
+ mov di,offset remote
+ mov al,2
+ mov ah,5FH
+ int 21H
+ endm
+; Function Request 5F03H
+REDIR macro device,value,source,destination
+ mov bl,device
+ mov cx,value
+ mov si,offset source
+  mov es,seg destination
+ mov di,offset destination
+ mov al,03H
+ mov ah,5FH
+ int 21H
+ endm
+; Function Request 5F04H
+
+  59
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+CANCEL_REDIR macro local
+ mov si,offset local
+ mov al,4
+ mov ah,5FH
+ int 21H
+ endm
+; Function Request 62H
+GET_PSP macro
+ mov ah,62H
+ int 21H
+ endm
+;
+;
+;*******************
+; General
+;*******************
+;
+DISPLAY_ASCIIZ macro asciiz_string
+ local search,found_it
+ mov bx,offset asciiz_string
+
+search:
+ cmp byte ptr [bx],0
+ je found_it
+ inc bx
+ jmp short search
+
+found_it:
+ mov byte ptr [bx],"$"
+ display asciiz_string
+ mov byte ptr [bx],0
+ display_char 0DH
+ display_char 0AH
+ endm
+;
+MOVE_STRING macro source,destination,count
+ push es
+ push ds
+ pop es
+ assume es:code
+ mov si,offset source
+ mov di,offset destination
+ mov cx,count
+ rep movs es:destination,source
+ assume es:nothing
+ pop es
+ endm
+;
+CONVERT macro value,base,destination
+ local table,start
+ jmp start
+table db "0123456789ABCDEF"
+
+start:
+ push ax
+ push bx
+
+60
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+ push dx
+ mov al,value
+ xor ah,ah
+ xor bx,bx
+ div base
+ mov bl,al
+ mov al,cs:table[bx]
+ mov destination,al
+ mov bl,ah
+ mov al,cs:table[bx]
+ mov destination[1],al
+ pop dx
+ pop bx
+ pop ax
+ endm
+;
+CONVERT_TO_BINARY macro string,number,value
+ local ten,start,calc,mult,no_mult
+ jmp start
+ten db 10
+
+start:
+ mov value,0
+ xor cx,cx
+ mov cl,number
+ xor si,si
+
+calc:
+ xor ax,ax
+ mov al,string[si]
+ sub al,48
+ cmp cx,2
+ jl no_mult
+ push cx
+ dec cx
+
+mult:
+ mul cs:ten
+ loop mult
+ pop cx
+
+no_mult:
+ add value,ax
+ inc si
+ loop calc
+ endm
+;
+CONVERT_DATE macro dir_entry
+ mov dx,word ptr dir_entry[24]
+ mov cl,5
+ shr dl,cl
+ mov dh,dir_entry[24]
+ and dh,1FH
+ xor cx,cx
+ mov cl,dir_entry[25]
+ shr cl,1
+
+  61
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+ add cx,1980
+ endm
+;
+PACK_DATE macro date
+ local set_bit
+;
+; On entry: DH=day, DL=month, CX=(year-1980)
+;
+ sub cx,1980
+ push cx
+ mov date,dh
+ mov cl,5
+ shl dl,cl
+ pop cx
+ jnc set_bit
+ or cl,80h
+
+set_bit:
+ or date,dl
+ rol cl,1
+ mov date[1],cl
+ endm
+;
+
+
+
+62
+
+_ _  |  |  _ _
+
+
+

@@ -1,0 +1,13 @@
+make=msmake /I makefile
+
+all:
+	cd boot
+	$(make)
+	cd ..\dos
+	$(make)
+	cd ..\bios
+	$(make)
+	cd ..\cmd
+	$(make)
+
+

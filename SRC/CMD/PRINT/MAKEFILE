@@ -1,0 +1,61 @@
+#**     makefile for print
+
+DEST	=print
+MSG	=messages
+
+#	Path definitions
+
+BIOS	=..\..\BIOS
+DOS	=..\..\DOS
+
+#       Definitions for assembler
+
+ASM	=masm
+AFLAGS	=-Mx -t
+AINC	=-I..\..\inc -I$(DOS)
+
+#       Definitions for C compiler
+
+CC	=cl
+CFLAGS	=-c -Ox -Zlp
+CINC	=-I..\..\h
+
+#	Definitions for linker
+
+LINK	=link
+LIBC	=..\..\libc
+
+
+# Rules and Dependencies follow
+
+PRINT_RM.OBJ: PRINT_RM.ASM print_rm.inc PRIDEFS.inc \
+    $(DOS)\DEVSYM.INC $(DOS)\SYSCALL.INC $(DOS)\ERROR.INC \
+    $(DOS)\SYSVAR.INC $(DOS)\FIND.INC
+	masm $(AFLAGS) $(AINC) PRINT_RM;
+
+PRINT_R.OBJ: PRINT_R.ASM PRIDEFS.inc \
+    $(DOS)\DEVSYM.INC $(DOS)\SYSCALL.INC $(DOS)\ERROR.INC \
+    $(DOS)\SYSVAR.INC $(DOS)\FIND.INC
+	masm $(AFLAGS) $(AINC) PRINT_R;
+
+PRINT_T.OBJ: PRINT_T.ASM PRIDEFS.inc \
+    $(DOS)\DEVSYM.INC $(DOS)\SYSCALL.INC $(DOS)\ERROR.INC \
+    $(DOS)\SYSVAR.INC $(DOS)\FIND.INC
+	masm $(AFLAGS) $(AINC) PRINT_T;
+
+PRINT_TM.OBJ: PRINT_TM.ASM print_tm.inc PRIDEFS.inc \
+    $(DOS)\DEVSYM.INC $(DOS)\SYSCALL.INC $(DOS)\ERROR.INC \
+    $(DOS)\SYSVAR.INC $(DOS)\FIND.INC
+	masm $(AFLAGS) $(AINC) PRINT_TM;
+
+NPRINTF.OBJ: NPRINTF.ASM PRIDEFS.inc \
+    $(DOS)\DEVSYM.INC $(DOS)\SYSCALL.INC $(DOS)\ERROR.INC \
+    $(DOS)\SYSVAR.INC $(DOS)\FIND.INC
+	masm $(AFLAGS) $(AINC) NPRINTF;
+
+PRINT.EXE: PRINT_RM.OBJ PRINT_R.OBJ PRINT_T.OBJ \
+    PRINT_TM.OBJ NPRINTF.OBJ
+	LINK @PRINT.LNK
+	CONVERT PRINT.EXE
+	DEL PRINT.EXE
+

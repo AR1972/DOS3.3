@@ -1,0 +1,3175 @@
+
+_ _  |  |  _ _
+
+  System Calls
+
+ _ ________________________
+
+
+1.1 Introduction
+
+The routines that MS-DOS uses to manage system operation and resources
+can be called by any application program. Using these system calls makes
+it easier to write machine-independent programs and increases the likeli-
+hood that a program will be compatible with future versions of MS-DOS.
+MS-DOS system calls fall into several categories:
+
+ o Standard character device I/O
+
+ o Memory management
+
+ o Process management
+
+ o File and directory management
+
+ o Microsoft Network calls
+
+ o National Language Support calls
+
+ o Miscellaneous system functions
+
+Applications invoke MS-DOS services by using software interrupts. The
+current range of interrupts used for MS-DOS is 20H-27H; 28H-40H are
+reserved. Interrupt 21H is the function request service; it provides access
+to a wide variety of MS-DOS services. In some cases, the full AX register
+is used to specify the requested function. Each interrupt or function
+request uses values in various registers to receive or return function-
+specific information.
+
+1.1.1 System Calls That Have Been Superseded
+
+Many system calls introduced in versions of MS-DOS earlier than 2.0 have
+been superseded by function requests that are more efficient and easier to
+use. Although MS-DOS still includes these old system calls, they should
+not be used unless it is imperative that a program maintain backward-
+compatibility with versions of MS-DOS before 2.0.
+
+A table of the pre-2.0 system calls and a description of the File Control
+Block (required by some of the old calls) appears in Section 1.8, "Old Sys-
+tem Calls."
+
+The first part of this chapter explains how DOS manages its resources\(em
+such as memory, files, and processes\(emand briefly describes the purpose of
+most of the system calls. The remainder of the chapter describes each
+interrupt and function request in detail.
+
+The system-call descriptions are in numeric order, interrupts followed by
+function requests. These descriptions include further detail on how
+MS-DOS manages its resources.
+
+
+  3
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+Microsoft MS-DOS Programmer's Reference
+
+_ _________________________________________________
+
+Chapter 2 of this manual describes how to write an MS-DOS device driver.
+Chapters 3, 4, and 5 contain more detailed information about MS-DOS,
+including how it manages disk space, the control blocks it uses, and how it
+loads and executes relocatable programs (files with an extension of .exe).
+Chapter 6 describes the Intel object module format. Chapter 7 gives some
+programming hints.
+
+1.2 Standard Character Device I/O
+
+The standard character function requests handle all input and output to
+and from character devices such as consoles, printers, and serial ports. If a
+program uses these function requests, its input and output can be
+redirected.
+
+Table 1.1 lists the MS-DOS function requests for managing standard char-
+acter input and output.
+
+Table 1.1
+
+Standard Character I/O Function Requests
+
+_ _________________________________________________________________________
+
+01H     
+
+ Read Keyboard and
+ Echo
+
+ Gets a character from standard input and echoes
+ it to standard output
+
+02H  Display Character  Sends a character to standard output 
+
+03H  Auxiliary Input   
+
+ Gets a character from standard auxiliary
+
+04H  Auxiliary Output   
+
+ Sends a character to standard auxiliary
+
+05H  Print Character   
+
+ Sends a character to the standard printer
+
+06H  Direct Console I/O   
+
+ Gets a character from standard input or sends a
+ character to standard output
+
+07H     
+
+ Direct Console Input
+
+ Gets a character from standard input
+
+08H  Read Keyboard   
+
+ Gets a character from standard input
+
+09H  Display String  Sends a string to standard output 
+
+0AH    Gets a string from standard input 
+
+ Buffered Keyboard
+ Input
+
+0BH     
+
+ Check Keyboard
+ Status
+
+ Reports on the status of the standard input
+ buffer
+
+0CH     
+
+ Flush Buffer, Read
+ Keyboard
+
+ Empties the standard input buffer and calls one
+ of the other standard character I/O function
+ requests
+
+_ _________________________________________________________________________
+
+Although several of these standard character I/O function requests seem
+to do the same thing, they are distinguished by whether they check for
+control characters or echo characters from standard input to standard
+
+4
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+  System Calls
+
+ _ ________________________
+
+output. The detailed descriptions later in this chapter point out the
+differences.
+
+1.3 Memory Management
+
+MS-DOS keeps track of which areas of memory are allocated by writing a
+memory control block at the beginning of each. This control block specifies
+the size of the memory area; the name of the process, if any, that owns the
+memory area; and a pointer to the next area of memory. If the memory
+area is not owned, it is available.
+
+Table 1.2 lists the MS-DOS function requests for managing memory.
+
+Table 1.2
+
+Memory Management Function Requests
+
+_ _________________________________________________________________________
+
+48H  Allocate Memory  Requests a block of memory 
+
+49H     
+
+ Free Allocated
+ Memory
+
+ Frees a block of memory previously allocated with 48H
+
+
+4AH  Set Block   
+
+ Changes the size of an allocated memory block
+
+_ _________________________________________________________________________
+
+When a process requests additional memory with Function 48H (Allocate
+Memory), MS-DOS searches for a block of available memory large enough
+to satisfy the request. If it finds such a block of memory, it changes the
+memory control block to show the owning process. If the block of memory
+is larger than the requested amount, MS-DOS changes the size field of the
+memory control block to the requested amount, writes a new memory con-
+trol block at the beginning of the unneeded portion showing that it is
+available, and updates the pointers to add this memory to the chain of
+memory control blocks. MS-DOS then returns the segment address of the
+first byte of the allocated memory to the requesting process.
+
+When a process releases an allocated block of memory with Function 49H
+(Free Allocated Memory), MS-DOS changes the memory control block to
+show that it is available (not owned by any process).
+
+When a process uses Function 4AH (Set Block) to shrink an allocated
+block of memory, MS-DOS builds a memory control block for the memory
+being released and adds it to the chain of memory control blocks. When a
+process tries to use Function 4AH (Set Block) to expand an allocated block
+of memory, MS-DOS treats it as a request for additional memory rather
+than returning the segment address of the additional memory to the
+requesting process. However, MS-DOS simply chains the additional
+memory to the existing memory block.
+
+  5
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+Microsoft MS-DOS Programmer's Reference
+
+_ _________________________________________________
+
+If MS-DOS can't find a block of available memory large enough to satisfy a
+request for additional memory made with either Function 48H (Allocate
+Memory) or Function 4AH (Set Block), MS-DOS returns an error code to
+the requesting process.
+
+When a program receives control, it should call Function 4AH (Set Block)
+to shrink its initial memory-allocation block (the block that begins with
+its Program Segment Prefix) to the minimum it requires. This frees
+unneeded memory and makes the best application design for portability to
+future multitasking environments.
+
+When a program exits, MS-DOS automatically frees its initial memory-
+allocation block before returning control to the calling program
+(command.com is usually the calling program for application programs).
+The DOS frees any memory owned by the exiting process.
+
+Any program that changes memory that is not allocated to it will most
+likely destroy at least one memory-management control block. This
+causes a memory-allocation error the next time MS-DOS tries to use the
+chain of memory control blocks; the only cure is to restart the system.
+
+1.4 Process Management
+
+MS-DOS uses several function requests to load, execute, and terminate
+programs. Application programs can use these same function requests to
+manage other programs.
+
+Table 1.3 lists the MS-DOS function requests for managing processes.
+
+Table 1.3
+
+Process-Management Function Requests
+
+_ _________________________________________________________________________
+
+31H  Keep Process   
+
+ Terminates a process and returns control to the
+ invoking process, but keeps the terminated
+ process in memory
+
+4BH    Loads and executes a program 
+
+ Load and Execute
+ Program
+
+4B03H  Load Overlay   
+
+ Loads a program overlay without executing it
+
+4CH  End Process   
+
+ Returns control to the invoking process
+
+4DH     
+
+ Get Return Code of
+ Child Process
+
+ Returns a code passed by an exiting child process
+
+
+62H  Get PSP   
+
+ Returns the segment address of the current
+ process's Program Segment Prefix
+
+_ _________________________________________________________________________
+
+
+6
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+  System Calls
+
+ _ ________________________
+
+
+1.4.1 Loading and Executing a Program
+
+When a program uses Function 4BH (Load and Execute Program) to load
+and execute another program, MS-DOS allocates memory, writes a Pro-
+gram Segment Prefix (PSP) for the new program at offset 0 of the allo-
+cated memory, loads the new program, and passes control to it. When the
+invoked program exits, control returns to the calling program.
+
+Command.com uses Function 4BH to load and execute command files.
+Application programs have the same degree of control over process
+management as does command.com.
+
+In addition to these common features, there are some differences in the
+way MS-DOS loads .com and .exe files.
+
+Loading a .Com Program
+
+When command.com loads and executes a .com program, it allocates all
+available memory to the application and sets the stack pointer 100H bytes
+from the end of available memory. A .com program should set up its own
+stack before shrinking its initial memory-allocation block with Function
+4AH (Set Block) because the default stack is in the memory to be released.
+
+If a newly loaded program is allocated all of memory\(emas a .com program
+is\(emor requests all of available memory by using Function 48H (Allocate
+Memory), MS-DOS allocates to it the memory occupied by the transient
+part of command.com. If the program changes this memory, MS-DOS
+must reload the transient portion of command.com before it can continue.
+If a program exits (via Function 31H, Keep Process) without releasing
+enough memory, the system halts and must be reset. To minimize this pos-
+sibility, a .com program should use Function 4AH (Set Block) to shrink its
+initial allocation block before doing anything else, and before exiting, all
+programs must release all memory they allocate by using Function 48H
+(Allocate Memory).
+
+Loading an .Exe Program
+
+When command.com loads and executes an .exe program, it allocates the
+size of the program's memory image plus either the value in the
+MAX_ALLOC field (offset 0CH) of the file header (if that much memory is
+available) or the value in the MIN_ALLOC field (offset 0AH). The linker
+sets these fields. Before passing control to the .exe file, MS-DOS uses the
+relocation information in the file header to calculate the correct relocation
+addresses.
+
+
+
+  7
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+Microsoft MS-DOS Programmer's Reference
+
+_ _________________________________________________
+
+For a more detailed description of how MS-DOS loads .com and .exe files,
+see Chapter 3, "MS-DOS Technical Information," and Chapter 4, "MS-
+DOS Control Blocks and Work Areas."
+
+Executing a Program from Within Another Program
+
+Since command.com builds pathnames, searches directory paths for exe-
+cutable files, and relocates .exe files, the simplest way to load and execute
+a program is to load and execute an additional copy of command.com,
+passing it a command line that includes the /C switch, which invokes the
+.com or .exe file. The description of Function 4B00H (Load and Execute
+Program) describes how to do this.
+
+1.4.2 Loading an Overlay
+
+When a program uses Function 4B03H (Load Overlay) to load an overlay,
+it must pass MS-DOS the segment address at which the overlay is to be
+loaded. The program must call the overlay, which then returns directly to
+the calling program. The calling program is in complete control: MS-DOS
+does not write a PSP for the overlay or intervene in any other way.
+
+MS-DOS does not check to see if the calling program owns the memory
+where the overlay is to be loaded. If the calling program does not own the
+memory, loading the overlay will most likely destroy a memory-control
+block, causing an eventual memory-allocation error.
+
+Therefore, a program that loads an overlay must either allow room for the
+overlay when it calls Function 4AH (Set Block) to shrink its initial
+memory-allocation block, or shrink its initial memory-allocation block to
+the minimum and then use Function 48H (Allocate Memory) to allocate
+memory for the overlay.
+
+1.5 File and Directory Management
+
+The MS-DOS hierarchical (multilevel) file system is similar to that of the
+XENIX operating system. For a description of the multilevel directory sys-
+tem and how to use it, see the MS-DOS User's Reference.
+
+1.5.1 Handles
+
+To create or open a file, a program passes MS-DOS a pathname and the
+attribute to be assigned to the file. MS-DOS returns a 16-bit number,
+called a handle. For most subsequent actions, MS-DOS requires only this
+handle to identify the file.
+
+8
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+  System Calls
+
+ _ ________________________
+
+A handle can refer to either a file or a device. MS-DOS predefines five stan-
+dard handles. These handles are always open, so you needn't open them
+before you use them. Table 1.4 lists these predefined handles.
+
+Table 1.4
+
+Predefined Device Handles
+
+_ _________________________________________________________________________
+
+Handle  Standard device  Comment 
+
+_ _________________________________________________________________________
+
+0  Input  Can be redirected from command line 
+1  Output  Can be redirected from command line 
+2  Error   
+3  Auxiliary   
+4  Printer   
+
+_ _________________________________________________________________________
+
+When MS-DOS creates or opens a file, it assigns the first available handle.
+Since a program can have 20 open handles, including the five predefined
+handles, it typically can open 15 extra files. By using Function 46H (Force
+Duplicate File Handle), MS-DOS can temporarily force any of the five
+predefined handles to refer to an alternate file or device. For more infor-
+mation about Function 46H, see its description later in this chapter.
+
+1.5.2 File-Related Function Requests
+
+MS-DOS treats a file as a string of bytes; it assumes no record structure or
+access technique. An application program imposes whatever record struc-
+ture it needs on this string of bytes. Reading from or writing to a file
+requires only pointing to the data buffer and specifying the number of
+bytes to read or write.
+
+Table 1.5 lists the MS-DOS function requests for managing files.
+
+Table 1.5
+
+File-Related Function Requests
+
+_ _________________________________________________________________________
+
+3CH  Create Handle  Creates a file 
+
+3DH  Open Handle  Opens a file 
+
+3EH  Close Handle  Closes a file 
+
+3FH  Read Handle  Reads from a file 
+
+40H  Write Handle  Writes to a file 
+
+42H  Move File Pointer  Sets the read/write pointer in a file 
+
+45H  Duplicate File Handle   
+
+ Creates a new handle that refers to the same
+ file as an existing handle
+
+
+
+  9
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+Microsoft MS-DOS Programmer's Reference
+
+_ _________________________________________________
+
+46H  Force Duplicate File Handle   
+
+ Makes an existing handle refer to the same file
+ as another existing handle
+
+5AH  Create Temporary File  Creates a file with a unique name 
+
+5BH  Create New File   
+
+ Attempts to create a file, but fails if a file with
+ the same name exists
+
+67H  Set Handle Count   
+
+ Increases or decreases the number of files a
+ program can have open at one time
+
+68H  Commit File   
+
+ Flushes buffered data for a file without closing
+ it to ensure the disk image of that file is
+ current
+
+_ _________________________________________________________________________
+
+
+File Sharing
+
+Version 3.1 of MS-DOS introduces file sharing, which lets more than one
+process share access to a file. File sharing operates only after the share
+command has been executed to load file-sharing support. That is, you
+must use the share command to take advantage of file sharing.
+
+Table 1.6 lists the MS-DOS function requests for sharing files; if file shar-
+ing is not in effect, these function requests cannot be used. Function 3DH
+(Open Handle) can operate in several modes. Here it is referred to in the
+file-sharing modes, which require file sharing to be in effect. (Compatibil-
+ity mode is usable without file sharing in effect.)
+
+Table 1.6
+
+File-Sharing Function Requests
+
+_ _________________________________________________________________________
+
+3DH  Open Handle   
+
+ Opens a file by using one of the file-sharing modes
+
+440BH  IOCtl Retry   
+
+ (before Interrupt 24 is issued) Specifies how many
+ times to retry an I/O operation that fails due to a file-
+ sharing violation
+
+5C00H  Lock  Locks a region of a file 
+
+5C01H  Unlock  Unlocks a region of a file 
+
+_ _________________________________________________________________________
+
+
+1.5.3 Device-Related Function Requests
+
+I/O Control for devices is implemented with Function 44H (IOCtl), which
+includes several subfunctions necessary to perform device-related tasks.
+Some forms of the IOCtl function request require that the device driver be
+written to support the IOCtl interface. Table 1.7 lists the MS-DOS func-
+tion requests for managing devices.
+
+Table 1.7
+
+Device-Related Function Requests
+
+10
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+  System Calls
+
+ _ ________________________
+
+_ _________________________________________________________________________
+
+4400H,01H  IOCtl Data  Gets or sets device description 
+
+4402H,03H  IOCtl Character   
+
+ Gets or sets character-device control data
+
+4404H,05H  IOCtl Block   
+
+ Gets or sets block-device control data
+
+4406H,07H  IOCtl Status   
+
+ Checks device input or output status
+
+4408H  IOCtl Is Changeable   
+
+ Checks whether block device contains
+ removable medium
+
+440CH  Generic IOCtl (for handles)   
+
+ Sets Generic IOCtl for handles and
+ supports code pages for devices
+
+440DH  Generic IOCtl (for devices)  Sets Generic IOCtl for devices 
+
+440E,0FH  Get/Set IOCtl Drive Map  Gets or sets logical drive map 
+
+_ _________________________________________________________________________
+
+Some forms of the IOCtl function request can be used only with Microsoft
+Networks; these forms are listed in Section 1.6, "Microsoft Networks."
+
+1.5.4 Directory-Related Function Requests
+
+A directory entry is a 32-byte record that includes the file's name, exten-
+sion, date and time of last change, and size. An entry in a subdirectory is
+identical to an entry in the root directory. Directory entries are described
+in detail in Chapter 3.
+
+The root directory on a disk has room for a fixed number of entries: 64 on
+a standard single-sided disk, 112 on a standard double-sided disk. For
+hard disks, the number of directories depends on the DOS partition size.
+A subdirectory is simply a file with a unique attribute; there can be as
+many subdirectories on a disk as space allows. The depth of a directory
+structure, therefore, is limited only by the amount of storage on a disk and
+the maximum pathname length of 64 characters. Pre-2.0 disks appear to
+have only a root directory that contains files but no subdirectories.
+
+Table 1.8 lists the MS-DOS function requests for managing directories.
+
+Table 1.8
+
+Directory-Related Function Requests
+
+_ _________________________________________________________________________
+
+39H  Create Directory  Creates a subdirectory 
+
+3AH  Remove Directory  Deletes a subdirectory 
+
+3BH  Change Current Directory  Changes the current directory 
+
+41H  Delete Directory Entry (Unlink)  Deletes a file 
+
+43H  Get/Set File Attributes (Chmod)   
+
+ Retrieves or changes the attributes of a file
+
+47H  Get Current Directory   
+
+ Returns current directory for a given drive
+
+
+
+  11
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+Microsoft MS-DOS Programmer's Reference
+
+_ _________________________________________________
+
+4EH  Find First File   
+
+ Searches a directory for the first entry that
+ matches a filename
+
+4FH  Find Next File   
+
+ Searches a directory for the next entry that
+ matches a filename
+
+56H  Change Directory Entry  Renames a file 
+
+57H  Get/Set Date/Time of File   
+
+ Changes the time and date of last change in a
+ directory entry
+
+_ _________________________________________________________________________
+
+
+1.5.5 File Attributes
+
+Table 1.9 describes the file attributes and how they are represented in the
+attribute byte of the directory entry (offset 0BH). The attributes can be
+inspected or changed with Function 43H (Get/Set File Attributes
+[Chmod]).
+
+Table 1.9
+
+File Attributes
+
+_ _________________________________________________________________________
+
+Code  Description 
+
+_ _________________________________________________________________________
+
+00H   
+
+ Normal; can be read or written without restriction
+
+01H   
+
+ Read-only; cannot be opened for write; a file with the same name
+ cannot be created
+
+02H  Hidden; not found by directory search 
+
+04H  System; not found by directory search 
+
+08H   
+
+ VolumeID; only one file can have this attribute; it must be in the root
+ directory
+
+10H  Subdirectory 
+
+20H   
+
+ Archive; set whenever the file is changed, or cleared by the Backup
+ command
+
+_ _________________________________________________________________________
+
+The VolumeID (08H) and Subdirectory (10H) attributes cannot be changed
+with Function 43H (Get/Set File Attributes [Chmod]).
+
+1.6 Microsoft Networks
+
+Microsoft Networks consists of a server and one or more workstations.
+MS-DOS maintains an assign list that keeps track of which workstation
+drives and devices have been redirected to the server. For a description of
+operation and use of the network, see the Microsoft Networks 1.0
+Manager's Guide and Microsoft Networks 1.0 User's Guide.
+
+12
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+  System Calls
+
+ _ ________________________
+
+Table 1.10 lists the MS-DOS function requests for managing a Microsoft
+Networks workstation.
+
+Table 1.10
+
+Microsoft Networks Function Requests
+
+_ _________________________________________________________________________
+
+4409H     
+
+ IOCtl Is Redirected
+ Block
+
+ Checks whether a drive letter refers to a local or
+ redirected drive
+
+440AH     
+
+ IOCtl Is Redirected
+ Handle
+
+ Checks whether a device name refers to a local or
+ redirected device
+
+5E00H  Get Machine Name  Gets the network name of the workstation 
+
+5E02H  Printer Setup   
+
+ Defines a string of control characters to be added
+ at the beginning of each file that is sent to a
+ network printer
+
+5F02H     
+
+ Get Assign-List
+ Entry
+
+ Gets an entry from the assign list, which shows
+ the workstation drive letter or device name and
+ the net name of the directory or device on the
+ server to which the entry is reassigned
+
+5F03H     
+
+ Make Assign-List
+ Entry
+
+ Redirects a workstation drive or device to a
+ server directory or device
+
+5F04H     
+
+ Cancel Assign-List
+ Entry
+
+ Cancels the redirection of a workstation drive or
+ device to a server directory or device
+
+_ _________________________________________________________________________
+
+
+1.7 National Language Support
+
+National language support for this version of MS-DOS includes these
+major features:
+
+ o Country-dependent information
+
+ o Support for national keyboard layouts
+
+ o Programming interfaces for national language support
+
+ o Utility commands
+
+Country-dependent information is available on a per-country basis and
+includes the following:
+
+ o Time, date, and currency
+
+ o Lowercase-to-uppercase character-conversion tables
+
+ o Collating sequence for character sorting
+
+ o Valid single-byte characters used in filenames
+
+Keyboard support for different keyboard layouts is provided and
+
+  13
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+Microsoft MS-DOS Programmer's Reference
+
+_ _________________________________________________
+
+selectable.
+
+Table 1.11 lists the MS-DOS national-language-support system calls that
+allow applications to use the country-dependent information just
+described.
+
+Table 1.11
+
+National Language-Support Function Requests
+
+_ _________________________________________________________________________
+
+65H  Get Extended Country Information   
+
+ Returns standard country
+ information, pointer to uppercase
+ table, pointer to filename
+ uppercasing table, or pointer to
+ collating table
+
+66H  Get/Set Global Code Page   
+
+ Gets or sets the code page used by
+ the kernel and all devices.
+
+_ _________________________________________________________________________
+
+
+1.8 Miscellaneous System-Management Func-
+tions
+
+The remaining system calls manage other system functions and resources
+such as drives, addresses, and the clock. Table 1.12 lists the MS-DOS func-
+tion requests for managing miscellaneous system resources and operation.
+
+Table 1.12
+
+Miscellaneous System-Management Function Requests
+
+_ _________________________________________________________________________
+
+0DH  Reset Disk  Empties all file buffers 
+
+0EH  Select Disk  Sets the default drive 
+
+19H  Get Current Disk  Returns the default drive 
+
+1AH    Establishes the disk I/O buffer 
+
+ Set Disk Transfer
+ Address
+
+1BH    Returns disk-format data 
+
+ Get Default Drive Data
+
+1CH  Get Drive Data  Returns disk-format data 
+
+25H  Set Interrupt Vector  Sets interrupt-handler address 
+
+29H  Parse File Name  Checks string for valid filename 
+
+2AH  Get Date  Returns system date 
+
+2BH  Set Date  Sets system date 
+
+2CH  Get Time  Returns system time 
+
+2DH  Set Time  Sets system time 
+
+2EH  Set/Reset Verify Flag  Turns disk verify on or off 
+
+14
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+  System Calls
+
+ _ ________________________
+
+2FH     
+
+ Get Disk Transfer
+ Address
+
+ Returns system-disk-I/O-buffer address
+
+
+30H    Returns MS-DOS version number 
+
+ Get MS-DOS Version
+ Number
+
+33H  CONTROL-C Check   
+
+ Returns CONTROL-C check status
+
+35H  Get Interrupt Vector   
+
+ Returns address of interrupt handler
+
+36H  Get Disk Free Space  Returns disk-space data 
+
+38H  Get/Set Country Data   
+
+ Sets current country or retrieves country
+ information
+
+54H  Get Verify State  Returns status of disk verify 
+
+_ _________________________________________________________________________
+
+
+1.9 Old System Calls
+
+Most of the superseded system calls deal with files. Table 1.13 lists these
+old calls and the function requests that have superseded them.
+
+Although MS-DOS still includes these old system calls, they should not be
+used unless a program must maintain backward-compatibility with earlier
+versions of MS-DOS.
+
+Table 1.13
+
+Old System Calls and Their Replacements
+
+_ _________________________________________________________________________
+
+Old System Call  Has Been Superseded By 
+       
+Code  Function  Code  Function 
+
+_ _________________________________________________________________________
+
+00H  Terminate Program  4CH  End Process  
+0FH  Open File  3DH  Open Handle 
+10H  Close File  3EH  Close Handle 
+11H  Search for First Entry  4EH  Find First File  
+12H  Search for Next Entry  4FH  Find Next File 
+13H  Delete File  41H  Delete Directory Entry 
+14H  Sequential Read  3FH  Read Handle  
+15H  Sequential Write  40H  Write Handle 
+16H  Create File  3CH  Create Handle 
+    5AH  Create Temporary File  
+    5BH  Create New File  
+17H  Rename File  56H  Change Directory Entry 
+21H  Random Read  3FH  Read Handle  
+22H  Random Write  40H  Write Handle  
+23H  Get File Size  42H  Move File Pointer  
+24H  Set Relative Record  42H  Move File Pointer  
+26H  Create New PSP  4BH  Load and Execute Program 
+27H  Random Block Read  42H  Move File Pointer 
+    3FH  Read Handle 
+
+  15
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+Microsoft MS-DOS Programmer's Reference
+
+_ _________________________________________________
+
+28H  Random Block Write  42H  Move File Pointer 
+    40H  Write Handle 
+       
+Code  Interrupt  Code  Function 
+
+_ _________________________________________________________________________
+
+20H  Program Terminate  4CH  End Process 
+27H  Terminate But Stay Resident  31H  Keep Process 
+
+_ _________________________________________________________________________
+
+
+1.9.1 File Control Block (FCB)
+
+The old file-related function requests require that a program maintain a
+File Control Block (FCB) for each file; this control block contains such
+information as a file's name, size, record length, and pointer to current
+record. MS-DOS does most of this housekeeping for the newer, handle-
+oriented function requests.
+
+Some descriptions of the old function requests refer to unopened and
+opened FCBs. An unopened FCB contains only a drive specifier and
+filename. An opened FCB contains all fields filled by Function 0FH (Open
+File).
+
+The Program Segment Prefix (PSP) includes room for two FCBs at offsets
+5CH and 6CH. For a description of how to use the PSP and FCB calls, see
+Chapter 4, "MS-DOS Control Blocks and Work Areas," Table 1.14
+describes the FCB fields.
+
+Table 1.14
+
+Format of the File Control Block (FCB)
+
+_ _________________________________________________________________________
+
+ Offset 
+Hex  Dec  Bytes  Field 
+
+_ _________________________________________________________________________
+
+00H   0  1  Drive Number 
+01H   1  8  Filename 
+09H   9  3  Extension 
+0CH   12  2  Current Block 
+        
+0EH   14  2  Record Size 
+10H   16  4  File Size 
+14H   20  2  Date of Last Write 
+16H   22  2  Time of Last Write 
+        
+18H   24  8  Reserved 
+20H   32  1  Current Record 
+21H   33  4  Relative Record 
+
+_ _________________________________________________________________________
+
+
+
+16
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+  System Calls
+
+ _ ________________________
+
+
+Fields of the FCB
+
+Drive Number (offset 00H): Specifies the disk drive; 1 means drive A and 2
+means drive B. If you use the FCB to create or open a file, you can set this
+field to 0 to specify the default drive; Function 0FH (Open File) sets the
+field to the number of the default drive.
+
+Filename (offset 01H): Eight characters, left-aligned and padded (if neces-
+sary) with blanks. If you specify a reserved device name (such as PRN), do
+not put a colon at the end.
+
+Extension (offset 09H): Three characters, left-aligned and padded (if neces-
+sary) with blanks. This field can be all blanks (no extension).
+
+Current Block (offset 0CH): Points to the block (group of 128 records) that
+contains the current record. This field and the Current Record field (offset
+1FH) make up the record pointer. This field is set to zero by the Open File
+system call.
+
+Record Size (offset 0EH): The size of a logical record, in bytes. Set to 128
+by the Open File system call. If the record size is not 128 bytes, you must
+set this field after opening the file.
+
+File Size (offset 0FH): The size of the file, in bytes. The first word of this
+4-byte field is the low-order part of the size.
+
+Date of Last Write (offset 13H): The date the file was created or last
+updated. The year, month, and day are mapped into two bytes as follows:
+
+Off set 14H Offset 13H
+|Y|Y|Y|Y|Y|Y|Y|M| |M|M|M|D|D|D|D|D|
+15 9 8 5 4 0
+
+Time of Last Write (offset 15H): The time the file was created or last
+updated. The hour, minutes, and seconds are mapped into two bytes as
+follows:
+
+Offset 16H Offset 15H
+|H|H|H|H|H|M|M|M| |M|M|M|S|S|S|S|S|
+15 11 10 5 4 0
+
+Reserved (offset 17H): These fields are reserved for use by MS-DOS.
+
+Current Record (offset 1FH): Points to one of the 128 records in the
+current block. This field and the Current Block field (offset 0CH) make up
+the record pointer. The Open File system call does not initialize this field.
+You must set it before doing a sequential read or write to the file.
+
+
+
+  17
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+Microsoft MS-DOS Programmer's Reference
+
+_ _________________________________________________
+
+Relative Record (offset 20H): Points to the currently selected record, count-
+ing from the beginning of the file (starting with 0). The Open File system
+call does not initialize this field. You must set it before doing a random
+read or write to the file. If the record size is less than 64 bytes, both words
+of this field are used; if the record size is 64 bytes or more, only the first
+three bytes are used.
+
+_ ________________________________________________________________
+
+Note
+
+ If you use the FCB at offset 5CH of the Program Segment Prefix, the
+ last byte of the Relative Record field is the first byte of the unformat-
+ ted parameter area that starts at offset 80H. This is the default Disk
+ Transfer Area.
+
+_ ________________________________________________________________
+
+
+Extended FCB
+
+The Extended File Control Block is used to create or search for directory
+entries of files with special attributes. It adds the following 7-byte prefix to
+the FCB:
+
+Name  Bytes  Offset 
+
+_ ________________________________________________________________
+
+Flag byte (FFH)   1  07H 
+Reserved   5  06H 
+Attribute byte   1  01H 
+
+_ ________________________________________________________________
+
+File attributes are described earlier in this chapter in Section 1.5.5, "File
+Attributes."
+
+_ ________________________________________________________________
+
+Note
+
+ You must remember to point to the beginning of the extended FCB if
+ you are using Functions 0FH-16H with extended FCBs.
+
+_ ________________________________________________________________
+
+
+
+18
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+  System Calls
+
+ _ ________________________
+
+
+1.10 Using the System Calls
+
+The remainder of this chapter describes how to use the system calls in
+application programs, and it lists the calls in numeric and alphabetic
+order, describing each call in detail.
+
+1.10.1 Issuing an Interrupt
+
+MS-DOS reserves Interrupts 28H through 3FH for its own use, and main-
+tains the table of interrupt-handler addresses (the vector table) in loca-
+tions 80H-FCH. Also, in case you need to write your own routines for
+three particular MS-DOS interrupt handlers (Program Terminate,
+CONTROL-C, and Critical Error), this chapter includes descriptions of each.
+Function requests have superseded most of these interrupts.
+
+To issue an interrupt, move any required data into the registers and give
+the INT instruction with the number of the interrupt you want.
+
+1.10.2 Calling a Function Request
+
+A function request is an MS-DOS routine for managing system resources.
+Use the following procedure to call a function request:
+
+ 1. Move any required data into the registers.
+
+ 2. Move the function number into AH.
+
+ 3. Move the action code, if required, into AL.
+
+ 4. Issue Interrupt 21H.
+
+
+1.10.3 Using the Calls from a High-Level Language
+
+The system calls can be executed from any high-level language whose
+modules can be linked with assembly-language modules. In addition to this
+linking technique, you can:
+
+ o Use the DOSXQQ function of Pascal-86 to call a function request
+ directly.
+
+ o Use the CALL statement or USER function to execute the required
+ assembly-language code from the BASIC interpreter.
+
+
+
+  19
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+Microsoft MS-DOS Programmer's Reference
+
+_ _________________________________________________
+
+
+1.10.4 Treatment of Registers
+
+When MS-DOS takes control after a function request, it switches to an
+internal stack, and preserves any registers not used to return information
+(except AX). The calling program's stack must be large enough to accom-
+modate the interrupt system\(emat least 128 bytes in addition to other
+needs.
+
+1.10.5 Handling Errors
+
+Most of the function requests introduced with version 2.0 or later set the
+Carry flag if there is an error, identifying the specific error by returning a
+number in the AX register. Table 1.15 lists these error codes and their
+meanings.
+
+Table 1.15
+
+Error Codes Returned in AX
+
+_ _________________________________________________________________________
+
+Code  Meaning 
+
+_ _________________________________________________________________________
+
+ 1  Invalid function code 
+ 2  File not found 
+ 3  Path not found 
+ 4  Too many open files (no open handles left) 
+ 5  Access denied 
+ 6  Invalid handle 
+ 7  Memory control blocks destroyed 
+ 8  Insufficient memory 
+ 9  Invalid memory block address 
+   
+10  Invalid environment 
+11  Invalid format 
+12  Invalid access code 
+13  Invalid data 
+14  Reserved 
+15  Invalid drive 
+16  Attempt to remove the current directory 
+17  Not same device 
+18  No more files 
+19  Disk is write-protected 
+   
+20  Bad disk unit 
+21  Drive not ready 
+22  Invalid disk command 
+23  CRC error 
+24  Invalid length (disk operation) 
+25  Seek error 
+26  Not an MS-DOS disk 
+27  Sector not found 
+28  Out of paper 
+29  Write fault 
+
+20
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+  System Calls
+
+ _ ________________________
+
+   
+30  Read fault 
+31  General failure 
+32  Sharing violation 
+33  Lock violation 
+34  Wrong disk 
+35  FCB unavailable 
+36-49  Reserved 
+   
+50  Network request not supported 
+51  Remote computer not listening 
+52  Duplicate name on network 
+53  Network name not found 
+54  Network busy 
+55  Network device no longer exists 
+56  Net BIOS command limit exceeded 
+57  Network adapter hardware error 
+58  Incorrect response from network 
+59  Unexpected network error 
+   
+60  Incompatible remote adapter 
+61  Print queue full 
+62  Queue not full 
+63  Not enough space for print file 
+64  Network name was deleted 
+65  Access denied 
+66  Network device type incorrect 
+67  Network name not found 
+68  Network name limit exceeded 
+69  Net BIOS session limit exceeded 
+   
+70  Temporarily paused 
+71  Network request not accepted 
+72  Print or disk redirection is paused 
+73-79  Reserved 
+   
+80  File exists 
+81  Reserved 
+82  Cannot make 
+83  Interrupt 24 failure 
+84  Out of structures 
+85  Already assigned 
+86  Invalid password 
+87  Invalid parameter 
+88  Net write fault 
+
+_ _________________________________________________________________________
+
+To handle error conditions, put the following statement immediately after
+calls that return errors:
+
+JC <error>
+
+<Error> represents the label of an error-handling routine that gets the
+specific error condition by checking the value in AX. This routine then
+
+  21
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+Microsoft MS-DOS Programmer's Reference
+
+_ _________________________________________________
+
+takes appropriate action.
+
+Some of the older system calls return a value in a register that specifies
+whether the operation was successful. To handle such errors, check the
+error code and take the appropriate action.
+
+Extended Error Codes
+
+Versions of MS-DOS after 2.0 have added new error messages. Any pro-
+grams that use the older system calls cannot use these new error messages.
+To avoid incompatibility, MS-DOS maps these new error codes to the old
+error code that most closely matches the new one.
+
+Function 59H (Get Extended Error) has been added so that these new calls
+can be used. It provides as much detail as possible about the most recent
+error code returned by MS-DOS. The description of Function 59H lists the
+new, more detailed error codes and shows how to use this function request.
+
+1.10.6 System Call Descriptions
+
+Most system calls require that you move information into one or more
+registers before issuing the call that returns information in the registers.
+The description of each system call in this chapter includes the following:
+
+ o A diagram of the 8088 registers that shows their contents before
+ and after the system call
+
+ o A more complete description of the register contents required
+ before the system call
+
+ o A description of the processing performed
+
+ o A more complete description of the register contents after the sys-
+ tem call
+
+ o An example of how to use the system call
+
+The following figure is a sample illustration of the 8088 registers, showing
+how the information is presented. Shaded areas indicate that the register
+receives or returns information used by the call.
+
+  _ _____________________
+
+
+22
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+  System Calls
+
+ _ ________________________
+
+  _ _____________________
+
+
+ Figure 1.1 Example of the 8088 Registers
+
+
+1.10.6.1 Sample Programs
+
+The sample programs show only data declarations and the code that you
+need to use the system calls. Unless stated otherwise, each example
+assumes a common program skeleton that defines the segments and
+returns control to MS-DOS. Each sample program is intended to be exe-
+cuted as a .com file. Figure 1.2 shows a complete sample program. The
+unshaded portion shows what appears in this chapter; the shaded portions
+are the common skeleton.
+
+------------------------------------------------------------
+code segment
+ assume cs:code,ds:code,es:nothing,ss:nothing
+ org 100H
+start: jmp begin
+;
+filename db "b:\textfile.asc",0
+buffer db 129 dup (?)
+handle dw ?
+;
+begin: open_handle filename,0 ; Open the file
+ jc error_open ; Routine not shown
+ mov handle,ax ; Save handle
+read_line: read_handle handle,buffer,128 ; Read 128 bytes
+ jc error_read ; Routine not shown
+ cmp ax,0 ; End of file?
+ je return ; Yes, go home
+ mov bx,ax ; No, AX bytes read
+ mov buffer[bx],"$" ; To terminate string
+ display buffer ; See Function 09H
+ jmp read_line ; Get next 128 bytes
+
+return: end_process 0 ; Return to MS-DOS
+last_inst: ; To mark next byte
+;
+code ends
+ end start
+------------------------------------------------------------
+
+
+ Figure 1.2 Sample Program with Common Skeleton
+
+A macro has been defined for each system call to allow the examples to be
+more complete programs, rather than isolated uses of the system calls.
+These macros, plus some general-purpose ones, are used in the sample pro-
+grams. For instance, the sample program in the preceding figure includes
+four such macros: open_handle, read_handle, display, and end_process.
+
+  23
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+Microsoft MS-DOS Programmer's Reference
+
+_ _________________________________________________
+
+All the macro definitions are listed at the end of this chapter.
+
+The macros assume the environment for a .com program as described in
+Chapter 4; in particular, they assume that all the segment registers con-
+tain the same value. To conserve space, the macros generally leave error
+checking to the main code and do not protect registers. This keeps the
+macros short, yet useful. You may find that such macros are a convenient
+way to include system calls in your assembly-language programs.
+
+1.10.6.2 Error Handling in Sample Programs
+
+Whenever a system call returns an error code, the sample program shows a
+test for the error condition and a jump to an error routine. To conserve
+space, the error routines themselves aren't shown. Some error routines
+might simply display a message and continue processing. For more serious
+errors, the routine might display a message and end the program (perform-
+ing any required housekeeping, such as closing files).
+
+Tables 1.16 through 1.19 list the Interrupts and Function Requests in
+numeric and alphabetic order.
+
+Table 1.16
+
+MS-DOS Interrupts, Numeric Order
+
+_ _________________________________________________________________________
+
+Interrupt  Description 
+
+_ _________________________________________________________________________
+
+20H  Program Terminate 
+21H  Function Request 
+22H  Terminate Process Exit Address 
+23H  CONTROL-C Handler Address 
+24H  Critical-Error-Handler Address 
+25H  Absolute Disk Read 
+26H  Absolute Disk Write 
+27H  Terminate But Stay Resident 
+28H-3FH  Reserved 
+
+_ _________________________________________________________________________
+
+Table 1.17
+
+MS-DOS Interrupts, Alphabetic Order
+
+_ _________________________________________________________________________
+
+Description  Interrupt 
+
+_ _________________________________________________________________________
+
+Absolute Disk Read  25H 
+Absolute Disk Write  26H 
+CONTROL-C Handler Address  23H 
+Critical-Error-Handler Address  24H 
+Function Request  21H 
+Program Terminate  20H 
+
+24
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+  System Calls
+
+ _ ________________________
+
+Reserved  28H-3FH 
+Terminate Process Exit Address  22H 
+Terminate But Stay Resident  27H 
+
+_ _________________________________________________________________________
+
+Table 1.18
+
+MS-DOS Function Requests, Numeric Order
+
+_ _________________________________________________________________________
+
+Function  Description 
+
+_ _________________________________________________________________________
+
+00H  Terminate Program 
+
+01H  Read Keyboard And Echo 
+
+02H  Display Character 
+
+03H  Auxiliary Input 
+
+04H  Auxiliary Output 
+
+05H  Print Character 
+
+06H  Direct Console I/O 
+
+07H  Direct Console Input 
+
+08H  Read Keyboard 
+
+09H  Display String 
+
+0AH  Buffered Keyboard Input 
+
+0BH  Check Keyboard Status 
+
+0CH  Flush Buffer, Read Keyboard 
+
+0DH  Reset Disk 
+
+0EH  Select Disk 
+
+0FH  Open File 
+
+10H  Close File 
+
+11H  Search For First Entry 
+
+12H  Search For Next Entry 
+
+13H  Delete File 
+
+14H  Sequential Read 
+
+15H  Sequential Write 
+
+16H  Create File 
+
+17H  Rename File 
+
+18H  Reserved 
+
+19H  Get Current Disk 
+
+1AH  Set Disk Transfer Address 
+
+1BH  Get Default Drive Data 
+
+1CH  Get Drive Data 
+
+1DH-20H  Reserved 
+
+21H  Random Read 
+
+  25
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+Microsoft MS-DOS Programmer's Reference
+
+_ _________________________________________________
+
+22H  Random Write 
+
+23H  Get File Size 
+
+24H  Set Relative Record 
+
+25H  Set Interrupt Vector 
+
+26H  Create New PSP 
+
+27H  Random Block Read 
+
+28H  Random Block Write 
+
+29H  Parse File Name 
+
+2AH  Get Date 
+
+2BH  Set Date 
+
+2CH  Get Time 
+
+2DH  Set Time 
+
+2EH  Set/Reset Verify Flag 
+
+2FH  Get Disk Transfer Address 
+
+30H  Get MS-DOS Version Number 
+
+31H  Keep Process 
+
+32H  Reserved 
+
+33H  CONTROL-C Check 
+
+34H  Reserved 
+
+35H  Get Interrupt Vector 
+
+36H  Get Disk Free Space 
+
+37H  Reserved 
+
+38H  Get/Set Country Data 
+
+39H  Create Directory 
+
+3AH  Remove Directory 
+
+3BH  Change Current Directory 
+
+3CH  Create Handle 
+
+3DH  Open Handle 
+
+3EH  Close Handle 
+
+3FH  Read Handle 
+
+40H  Write Handle 
+
+41H  Delete Directory Entry (Unlink) 
+
+42H  Move File Pointer  
+
+43H  Get/Set File Attributes (Chmod) 
+
+4400H,4401H  IOCtl Data 
+
+4402H,4403H  IOCtl Character 
+
+4404H,4405H  IOCtl Block 
+
+4406H,4407H  IOCtl Status 
+
+4408H  IOCtl Is Changeable 
+
+4409H  IOCtl Is Redirected Block 
+
+26
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+  System Calls
+
+ _ ________________________
+
+440AH  IOCtl Is Redirected Handle 
+
+440BH  IOCtl Retry 
+
+440CH  Generic IOCtl (for code page functions) 
+
+440DH  Generic IOCtl (for devices) 
+
+440EH  Get IOCtl Drive Map 
+
+440FH  Set IOCtl Drive Map 
+
+45H  Duplicate File Handle 
+
+46H  Force Duplicate File Handle 
+
+47H  Get Current Directory 
+
+48H  Allocate Memory 
+
+49H  Free Allocated Memory 
+
+4AH  Set Block 
+
+4BH  Load and Execute Program 
+
+4B03H  Load Overlay 
+
+4CH  End Process 
+
+4DH  Get Return Code of Child Process 
+
+4EH  Find First File 
+
+4FH  Find Next File 
+
+50H-53H  Reserved 
+
+54H  Get Verify State 
+
+55H  Reserved 
+
+56H  Change Directory Entry 
+
+57H  Get/Set Date/Time of File 
+
+58H  Get/Set Allocation Strategy 
+
+59H  Get Extended Error 
+
+5AH  Create Temporary File 
+
+5BH  Create New File 
+
+5C00H  Lock 
+
+5C01H  Unlock 
+
+5DH  Reserved 
+
+5E00H  Get Machine Name 
+
+5E02H  Printer Setup 
+
+5F02H  Get Assign-List Entry 
+
+5F03H  Make Assign-List Entry 
+
+5F04H  Cancel Assign-List Entry 
+
+60H-61H  Reserved 
+
+62H  Get PSP 
+
+63H,64H  Reserved 
+
+65H  Get Extended Country Information 
+
+66H  Get/Set Global Code Page 
+
+  27
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+Microsoft MS-DOS Programmer's Reference
+
+_ _________________________________________________
+
+67H  Set Handle Count 
+
+68H  Commit File 
+
+69H-7FH  Reserved 
+
+_ _________________________________________________________________________
+
+Table 1.19
+
+MS-DOS Function Requests, Alphabetic Order
+
+_ _________________________________________________________________________
+
+Description  Interrupt 
+
+_ _________________________________________________________________________
+
+Allocate Memory  48H 
+
+Auxiliary Input  03H 
+
+Auxiliary Output  04H 
+
+Buffered Keyboard Input  0AH 
+
+Cancel Assign-List Entry  5F04H 
+
+Change Current Directory  3BH 
+
+Change Directory Entry  56H 
+
+Check Keyboard Status  0BH 
+
+Close File  10H 
+
+Close Handle  3EH 
+
+Commit FIle  68H 
+
+CONTROL-C Check  33H 
+
+Create Directory  39H 
+
+Create File  16H 
+
+Create Handle  3CH 
+
+Create New File  5BH 
+
+Create New PSP  26H 
+
+Create Temporary File  5AH 
+
+Delete Directory Entry (Unlink)  41H 
+
+Delete File  13H 
+
+Direct Console I/O  06H 
+
+Direct Console Input  07H 
+
+Display Character  02H 
+
+Display String  09H 
+
+Duplicate File Handle  45H 
+
+End Process  4CH 
+
+Find First File  4EH 
+
+Find Next File  4FH 
+
+Flush Buffer, Read Keyboard  0CH 
+
+Force Duplicate File Handle  46H 
+
+
+28
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+  System Calls
+
+ _ ________________________
+
+Free Allocated Memory  49H 
+
+Generic IOCtl (for devices)  440DH 
+
+Generic IOCtl (for code page functions)  440CH 
+
+Get Assign-List Entry  5F02H 
+
+Get Current Directory  47H 
+
+Get Current Disk  19H 
+
+Get Date  2AH 
+
+Get Default Drive Data  1BH 
+
+Get Disk Free Space  36H 
+
+Get Disk Transfer Address  2FH 
+
+Get Drive Data  1CH 
+
+Get Extended Country Information  65H 
+
+Get Extended Error  59H 
+
+Get File Size  23H 
+
+Get Interrupt Vector  35H 
+
+Get IOCtl Drive Map  440EH 
+
+Get Machine Name  5E00H 
+
+Get MS-DOS Version Number  30H 
+
+Get PSP  62H 
+
+Get Return Code of Child Process  4DH 
+
+Get Time  2CH 
+
+Get Verify State  54H 
+
+Get/Set Allocation Strategy  58H 
+
+Get/Set Country Data  38H 
+
+Get/Set Date/Time Of File  57H 
+
+Get/Set File Attributes (Chmod)  43H 
+
+Get/Set Global Code Page  66H 
+
+IOCtl Block  4404H,4405H 
+
+IOCtl Character  4402H,4403H 
+
+IOCtl Data  4400H,4401H 
+
+IOCtl Is Changeable  4408H 
+
+IOCtl Is Redirected Block  4409H 
+
+IOCtl Is Redirected Handle  440AH 
+
+IOCtl Retry  440BH 
+
+IOCtl Status  4406H,4407H 
+
+Keep Process  31H 
+
+Load and Execute Program  4BH 
+
+Load Overlay  4B03H 
+
+Lock  5C00H 
+
+Make Assign-List Entry  5F03H 
+
+  29
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+Microsoft MS-DOS Programmer's Reference
+
+_ _________________________________________________
+
+Move File Pointer  42H 
+
+Open File  0FH 
+
+Open Handle  3DH 
+
+Parse File Name  29H 
+
+Print Character  05H 
+
+Printer Setup  5E02H 
+
+Random Block Read  27H 
+
+Random Block Write  28H 
+
+Random Read  21H 
+
+Random Write  22H 
+
+Read Handle  3FH 
+
+Read Keyboard  08H 
+
+Read Keyboard And Echo  01H 
+
+Remove Directory  3AH 
+
+Rename File  17H 
+
+Reserved  18H 
+
+Reserved  1DH-20H 
+
+Reserved  32H 
+
+Reserved  34H 
+
+Reserved  37H 
+
+Reserved  50H-53H 
+
+Reserved  55H 
+
+Reserved  5DH 
+
+Reserved  60H-61H 
+
+Reserved  63H, 64H 
+
+Reserved  69H-7FH 
+
+Reset Disk  0DH 
+
+Search for First Entry  11H 
+
+Search for Next Entry  12H 
+
+Select Disk  0EH 
+
+Sequential Read  14H 
+
+Sequential Write  15H 
+
+Set Block  4AH 
+
+Set Date  2BH 
+
+Set Disk Transfer Address  1AH 
+
+Set Handle Count  67H 
+
+Set Interrupt Vector  25H 
+
+Set IOCtl Drive Map  440FH 
+
+Set Relative Record  24H 
+
+Set Time  2DH 
+
+30
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+  System Calls
+
+ _ ________________________
+
+Set/Reset Verify Flag  2EH 
+
+Terminate Program  00H 
+
+Unlock  5C01H 
+
+Write Handle  40H 
+
+_ _________________________________________________________________________
+
+A detailed description of each system call follows. These calls are listed in
+numeric order, interrupts first, followed by function requests.
+
+_ ________________________________________________________________
+
+Note
+
+ Unless stated otherwise, in the system call descriptions\(emboth text and
+ code\(emall numbers are in hexadecimal.
+
+_ ________________________________________________________________
+
+
+1.11 Interrupts
+
+The following pages describe Interrupts 20H-27H.
+
+
+  31
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+Microsoft MS-DOS Programmer's Reference
+
+_ _________________________________________________
+
+
+Program Terminate (Interrupt 20H)
+
+ Call:
+
+ CS
+  Segment address of Program Segment Prefix
+
+ Return:
+
+ None
+
+
+
+Comments:
+
+Interrupt 20H terminates the current process and returns control to its
+parent process. It also closes all open file handles and clears the disk cache.
+When this interrupt is issued, CS must contain the segment address of the
+Program Segment Prefix.
+
+Interrupt 20H is provided only for compatibility with MS-DOS versions
+prior to 2.0. New programs should use Function 4CH (End Process),
+which permits returning a completion code to the parent process and does
+not require CS to contain the segment address of the Program Segment
+Prefix.
+
+The following exit addresses are restored from the Program Segment
+Prefix:
+
+Offset
+ Exit Address
+_ ________________________________________________________________
+
+0AH Program terminate
+
+0EH CONTROL-C
+
+12H Critical error
+
+All file buffers are flushed to disk.
+
+_ ________________________________________________________________
+
+32
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+  System Calls
+
+ _ ________________________
+
+Note
+
+ You should close all files that have changed in length before issuing
+ this interrupt. If you do not close a changed file, its length may not be
+ recorded correctly in the directory. See Functions 10H and 3EH for a
+ description of the Close File system calls. If sharing is loaded, you
+ should remove all locks before using Interrupt 20H. See Function 5CH
+ (Lock) for more information.
+
+_ ________________________________________________________________
+
+
+Macro Definition:
+
+
+terminate macro
+  int 20H
+  endm
+
+
+Example:
+
+The following program displays a message and returns to MS-DOS. It uses
+only the opening portion of the sample program skeleton shown in Figure
+1.2:
+
+message db "displayed by INT20H example". 0DH, 0AH, "$"
+;
+begin: display message ;see Function 09H
+ terminate ;THIS INTERRUPT
+code ends
+ end start
+
+
+
+  33
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+Microsoft MS-DOS Programmer's Reference
+
+_ _________________________________________________
+
+
+Function Request (Interrupt 21H)
+
+ Call:
+
+ AH
+  Function number
+
+ Other registers
+  As specified in individual function
+
+ Return:
+
+ None.
+
+
+
+Comments:
+
+As specified in individual function. Interrupt 21H causes MS-DOS to carry
+out the function request whose number is in AH. See Section 1.12, "Func-
+tion Requests," for a description of the MS-DOS functions.
+
+Example:
+
+To call the Get Time function:
+
+mov ah,2CH ;Get Time is Function 2CH
+int 21H ;MS-DOS function request
+
+
+
+34
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+  System Calls
+
+ _ ________________________
+
+
+Terminate Process Exit Address (Interrupt
+22H)
+
+This interrupt may be issued only by MS-DOS; user programs must never
+issue it. If you must write your own terminate interrupt handler, use
+Function 35H (Get Interrupt Vector) to get the address of the standard
+routine, save the address, then use Function 25H (Set Interrupt Vector) to
+change the Interrupt 22H entry in the vector table so that it points to your
+routine.
+
+When a program terminates, MS-DOS transfers control to the routine that
+starts at the address in the Interrupt 22H entry in the vector table. When
+MS-DOS creates a program segment, it copies this address into the Pro-
+gram Segment Prefix, starting at offset 0AH.
+
+
+  35
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+Microsoft MS-DOS Programmer's Reference
+
+_ _________________________________________________
+
+
+CONTROL-C Handler Address (Interrupt 23H)
+
+When you type CONTROL-C or CONTROL-BREAK (on IBM-compatibles),
+MS-DOS transfers control as soon as possible to the routine that starts at
+the address in the Interrupt 23H entry in the vector table. When MS-DOS
+creates a program segment, it copies the address currently in the interrupt
+table into the Program Segment Prefix, starting at offset 0EH.
+
+This interrupt may be issued only by MS-DOS; user programs must never
+issue it. If you must write your own CONTROL-C interrupt handler, use
+Function Request 35H (Get Interrupt Vector) to get the address of the
+standard routine, save the address, then use Function Request 25H (Set
+Interrupt Vector) to change the Interrupt 23H entry in the vector table to
+point to your routine.
+
+If the CONTROL-C routine preserves all registers, it can end with an IRET
+instruction (return from interrupt) to continue program execution. If a
+user-written interrupt program returns with a long return, the program
+uses the carry flag to determine whether or not the program will abort. If
+the carry flag is set, it will abort; otherwise, execution will continue as
+with a return by IRET.
+
+If a user-written CONTROL-BREAK routine interrupts function calls 09H,
+0AH, or buffered I/O, and if it continues execution with an IRET, then
+I/O continues from the start of the line. MS-DOS always outputs a
+CONTROL-C to the screen when it issues an Interrupt 23H. There is no way
+to turn this off.
+
+When the interrupt occurs, all registers are set to the value they had when
+the original call to MS-DOS was made. There are no restrictions on what
+a CONTROL-C handler can do\(emincluding calling MS-DOS functions\(emas
+long as the program restores the registers.
+
+If a CONTROL-C interrupts Function 09H or 0AH (Display String or
+Buffered Keyboard Input), the three-byte sequence 03H-0DH-0AH (usually
+displayed as C followed by a carriage-return) is sent to the display and the
+function resumes at the beginning of the next line.
+
+Suppose a program uses Function 4BH (Load and Execute Program) to
+create a second Program Segment Prefix and execute a second program,
+which then changes the CONTROL-C address in the vector table. MS-DOS
+restores this CONTROL-C vector to its original value before returning con-
+trol to the calling program.
+
+
+36
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+  System Calls
+
+ _ ________________________
+
+
+Critical-Error-Handler Address (Interrupt 24H)
+
+If a critical error occurs during execution of an I/O function request (this
+often means a fatal disk error), MS-DOS transfers control to the routine at
+the address in the Interrupt 24H entry in the vector table. When MS-DOS
+creates a program segment, it copies this address into the Program Seg-
+ment Prefix, starting at offset 12H.
+
+This interrupt may be issued only by MS-DOS; user programs must never
+issue it. If you must write your own critical-error interrupt handler, use
+Function 35H (Get Interrupt Vector) to get the address of the standard
+routine, save the address, then use Function 25H (Set Interrupt Vector) to
+change the Interrupt 24H entry in the vector table to point to your rou-
+tine.
+
+MS-DOS does not issue Interrupt 24H if a failure occurs during execution
+of Interrupt 25H (Absolute Disk Read) or Interrupt 26H (Absolute Disk
+Write). A command.com error routines handles these errors. This routine
+retries the disk operation, then gives you the choice of aborting the opera-
+tion, retrying it, allowing the system call to fail and the application pro-
+cess to continue, or ignoring the error.
+
+The following topics describe the requirements of an Interrupt 24H rou-
+tine, including the error codes, registers, and stack.
+
+1.11.1 Conditions upon Entry
+
+After retrying an I/O error five times, MS-DOS issues Interrupt 24H,
+unless a File Allocation Table (FAT) or directory sector is involved. In
+those cases, DOS performs three retries. The interrupt handler receives
+control with interrupts disabled. AX and DI contain error codes, and BP
+contains the offset (to the segment address in SI) of a Device Header con-
+trol block that describes the device on which the error occurred.
+
+1.11.2 Requirements for an Interrupt 24H Handler
+
+To issue the "Abort, Retry, Fail or Ignore" prompt to a user, a user-
+written critical-error handler should first push the flags and execute a FAR
+call to the address of the standard Interrupt 24H handler (the user pro-
+gram that changed the Interrupt 24H vector also should have saved this
+address). After a user responds to the prompt, MS-DOS returns control to
+the user-written routine.
+
+_ ________________________________________________________________
+
+Note
+
+
+  37
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+Microsoft MS-DOS Programmer's Reference
+
+_ _________________________________________________
+
+ There are source applications which will have trouble handling critical
+ errors, since this changes the stack frame.
+
+_ ________________________________________________________________
+
+The error handler can then do its processing, but before it does anything
+else it must preserve BX, CX, DX, DS, ES, SS, and SP. Also, the error
+handler may use only function calls 01-0CH (inclusive) and 59H (if it uses
+any others, the error handler destroys the MS-DOS stack and leaves
+MS-DOS in an unstable state). The contents of the Device Header should
+not be changed.
+
+It is recommended that Interrupt 24H routine fail critical errors and let
+the application test for an extended error code when the Interrupt 21H
+routine returns.
+
+User Stack
+
+This call uses the user stack that contains the following (starting with the
+top of the stack):
+
+IP MS-DOS registers from issuing Interrupt 24H
+CS
+FLAGS
+
+AX User registers at time of original
+BX INT 21H
+CX
+DX
+SI
+DI
+BP
+DS
+ES
+
+IP From the original INT 21H
+CS from the user to MS-DOS
+FLAGS
+
+The registers are set such that if the user-written error handler issues an
+IRET, MS-DOS responds according to the value in AL:
+
+AL
+ Action
+_ ________________________________________________________________
+
+0 Ignore the error.
+
+1 Retry the operation.
+
+2 Abort the program by issuing Interrupt 23H.
+
+
+
+38
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+  System Calls
+
+ _ ________________________
+
+3 Fail the system call that is in progress.
+
+Note that the ignore option may cause unexpected results, such as causing
+MS-DOS to behave as if an operation had completed successfully.
+
+Disk Error Code in AX
+
+If bit 7 of AH is 0, the error occurred on a disk drive. AL contains the fail-
+ing drive (0=A, 1=B, etc.). Bit 0 of AH specifies whether the error
+occurred during a read or write operation (0=read, 1=write), and bits 1
+and 2 of AH identify the area of the disk where the error occurred:
+
+Bits 1-2
+ Location of error
+_ ________________________________________________________________
+
+00 MS-DOS area
+
+01 File Allocation Table
+
+10 Directory
+
+11 Data area
+
+Bits 3-5 of AH specify valid responses to the error prompt:
+
+Bit  Value  Response 
+
+_ ________________________________________________________________
+
+3  0  Fail not allowed 
+  1  Fail allowed 
+
+4  0  Retry not allowed 
+  1  Retry allowed 
+
+5  0  Ignore not allowed 
+  1  Ignore allowed 
+
+_ ________________________________________________________________
+
+If you specify Retry but it isn't allowed, MS-DOS changes it to Fail. If you
+specify Ignore but it isn't allowed, MS-DOS changes it to Fail. If you
+specify Fail but it isn't allowed, MS-DOS changes it to Abort. The Abort
+response is always allowed.
+
+Other Device Error Code in AX
+
+If bit 7 of AH is 1, either the memory image of the File Allocation Table
+(FAT) is bad or an error occurred on a character device. The device header
+pointed to by BP:SI contains a WORD of attribute bits that identify the
+type of device and, therefore, the type of error.
+
+
+
+  39
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+Microsoft MS-DOS Programmer's Reference
+
+_ _________________________________________________
+
+The word of attribute bits is at offset 04H of the Device Header. Bit 15
+specifies the type of device (0=block, 1=character).
+
+If bit 15 is 0 (block device), the error was a bad memory image of the FAT.
+
+If bit 15 is 1 (character device), the error was on a character device. DI
+contains the error code, the contents of AL are undefined, and bits 0-3 of
+the attribute word have the following meaning:
+
+Bit
+ Meaning if Set
+_ ________________________________________________________________
+
+0 Current standard input
+
+1 Current standard output
+
+2 Current null device
+
+3 Current clock device
+
+See Chapter 2, "MS-DOS Device Drivers," for a complete description of
+the Device Header control block.
+
+Error Code in DI
+
+The high byte of DI is undefined. The low byte contains the following error
+codes:
+
+Error code
+ Description
+_ ________________________________________________________________
+
+0 Attempt to write on write-protected disk
+
+1 Unknown unit
+
+2 Drive not ready
+
+3 Unknown command
+
+4 CRC error in data
+
+5 Bad drive request structure length
+
+6 Seek error
+
+7 Unknown media type
+
+8 Sector not found
+
+9 Printer out of paper
+
+A Write fault
+
+B Read fault
+
+C General failure
+
+A user-written Interrupt 24H handler can use Function 59H (Get Extended
+
+40
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+  System Calls
+
+ _ ________________________
+
+Error) to get detailed information about the error that caused the inter-
+rupt to be issued.
+
+
+  41
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+Microsoft MS-DOS Programmer's Reference
+
+_ _________________________________________________
+
+
+Absolute Disk Read (Interrupt 25H)
+
+ Call:
+
+ AL
+  Drive number
+ DS:BX
+  Disk Transfer Address
+ CX
+  Number of sectors
+ DX
+  Beginning relative sector
+
+ Return:
+
+ AL
+  Error code if CF=1
+ Flags
+  CF = 0 if successful
+  = 1 if not successful
+
+
+Comments:
+
+The registers must contain the following:
+
+Register
+ Contents
+_ ________________________________________________________________
+
+AL Drive number (0=A, 1=B, etc.)
+
+BX Offset of Disk Transfer Address (from segment address in DS)
+
+CX Number of sectors to read
+
+DX Beginning relative sector
+
+_ ________________________________________________________________
+
+Warning 
+
+ Avoid using this function unless absolutely necessary. Instead, you
+ should access files through normal MS-DOS function requests. There
+ is no guarantee of upward compatibility for the Absolute Disk I/O in
+ future releases of MS-DOS.
+
+_ ________________________________________________________________
+
+Interrupt 25H transfers control to the device driver and reads from the
+disk to the Disk-Transfer Address the number of sectors specified in CX.
+The interrupt has the same requirements as and processes identically to
+
+42
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+  System Calls
+
+ _ ________________________
+
+Interrupt 26H (Absolute Disk Write), except that it reads data rather than
+writes it. Also, since this interrupt does not check your input parameters
+too closely, make sure they are reasonable. If you use unreasonable
+parameters, you may get strange results or cause your system to crash.
+
+_ ________________________________________________________________
+
+Note
+
+ This call destroys all registers except the segment registers. So before
+ issuing the interrupt, save any registers that your program uses.
+
+_ ________________________________________________________________
+
+The system pushes the flags at the time of the call; they are still there upon
+return. To prevent uncontrolled growth, be sure to pop the stack upon
+return.
+
+If the disk operation is successful, the Carry Flag (CF) is 0. If the disk
+operation is not successful, CF is 1 and AL contains the MS-DOS error
+code (see Interrupt 24H earlier in this section for the codes and their
+meanings).
+
+Macro Definition:
+
+
+abs_disk_read macro disk,buffer,num_sectors,first_sector
+ mov al,disk
+ mov bx,offset buffer
+ mov cx,num_sectors
+ mov dx,first_sector
+ int 25H
+ popf
+ endm
+
+
+Example:
+
+The following program copies the contents of a single-sided disk in drive A
+to the disk in drive B.
+
+prompt db "Source in A, target in B",0DH,0AH
+ db "Any key to start. $"
+first dw 0
+buffer db 60 dup (512 dup (?)) ;60 sectors
+;
+begin: display prompt ;see Function 09H
+ read_kbd ;see Function 08H
+ mov cx,6 ;copy 6 groups of
+ ;60 sectors
+copy: push cx ;save the loop counter
+ abs_disk_read 0,buffer,60,first ;THIS INTERRUPT
+
+  43
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+Microsoft MS-DOS Programmer's Reference
+
+_ _________________________________________________
+
+ abs_disk_write 1,buffer,60,first ;see INT 26H
+ add first,60 ;do the next 60 sectors
+ pop cx ;restore the loop counter
+ loop copy
+
+
+
+44
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+  System Calls
+
+ _ ________________________
+
+
+Absolute Disk Write (Interrupt 26H)
+
+ Call:
+
+ AL
+  Drive number
+ DS:BX
+  Disk Transfer Address
+ CX
+  Number of sectors
+ DX
+  Beginning relative sector
+
+ Return:
+
+ AL
+  Error code if CF = 1
+ FLAGS
+  CF = 0 if successful
+  = 1 if not successful
+
+
+Comments:
+
+_ ________________________________________________________________
+
+Warning 
+
+ Avoid using this function unless absolutely necessary. Instead, you
+ should access files through normal MS-DOS function requests. There
+ is no guarantee of upward compatibility for the Absolute Disk I/O in
+ future releases of MS-DOS.
+
+_ ________________________________________________________________
+
+The registers must contain the following:
+
+Register
+ Contents
+_ ________________________________________________________________
+
+AL Drive number (0=A, 1=B, etc.)
+
+BX Offset of Disk Transfer Address (from segment address in DS)
+
+CX Number of sectors to write
+
+DX Beginning relative sector
+
+This interrupt transfers control to MS-DOS. The number of sectors
+specified in CX is written from the Disk Transfer Address to the disk. Its
+requirements and processing are identical to Interrupt 25H (Absolute Disk
+
+  45
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+Microsoft MS-DOS Programmer's Reference
+
+_ _________________________________________________
+
+Read), except data is written to the disk rather than read from it. Also,
+since Interrupt 26H does not check your input parameters too closely,
+make sure they are reasonable. If you use unreasonable parameters, you
+may get strange results or cause your system to crash.
+
+_ ________________________________________________________________
+
+Note
+
+ This call destroys all registers except the segment registers. So before
+ issuing the interrupt, be sure to save any registers your program uses.
+
+_ ________________________________________________________________
+
+The system pushes the flags at the time of the call; they are still there upon
+return. To prevent uncontrolled growth, be sure to pop the stack upon
+return.
+
+If the disk operation is successful, the Carry Flag (CF) is 0. If the disk
+operation is not successful, CF is 1 and AL contains the MS-DOS error
+code (see Interrupt 24H for the codes and their meanings).
+
+Macro Definition:
+
+
+abs_disk_write macro disk,buffer,num_sectors,first_sector
+ mov al,disk
+ mov bx,offset buffer
+ mov cx,num_sectors
+ mov dx,first_sector
+ int 26H
+ popf
+ endm
+
+
+Example:
+
+The following program copies the contents of a single-sided disk in drive A
+to the disk in drive B, verifying each write. It uses a buffer of 32K bytes.
+
+off equ 0
+on equ 1
+;
+prompt db "Source in A, target in B",0DH,0AH
+ db "Any key to start. $"
+first dw 0
+buffer db 60 dup (512 dup (?)) ;60 sectors
+;
+begin: display prompt ;see Function 09H
+ read_kbd ;see Function 08H
+ verify on ;see Function 2EH
+ mov cx,6 ;copy 6 groups of 60 sectors
+
+46
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+  System Calls
+
+ _ ________________________
+
+copy: push cx ;save the loop counter
+ abs_disk_read 0,buffer,60,first ;see INT 25H
+ abs_disk_write 1,buffer,60,first ;THIS INTERRUPT
+ add first,60 ;do the next 60 sectors
+ pop cx ;restore the loop counter
+ loop copy
+ verify off ;see Function 2EH
+
+
+
+  47
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+Microsoft MS-DOS Programmer's Reference
+
+_ _________________________________________________
+
+
+Terminate But Stay Resident (Interrupt 27H)
+
+ Call:
+
+ CS:DX
+  Pointer to first byte following
+  last byte of code.
+
+ Return:
+
+ None
+
+
+
+Comments:
+
+This interrupt is provided only for compatibility with MS-DOS versions
+prior to 2.0. Unless your resident program must be compatible with
+MS-DOS versions before 2.0, you should use Function 31H (Keep Process)
+to install it. Function 31H lets programs larger than 64K remain resident
+and allows return information to be passed.
+
+However, Interrupt 27H, which is often used to install device-specific inter-
+rupt handlers, forces programs that are up to 64K to remain resident after
+they terminate.
+
+DX must contain the offset (from the segment address in CS) of the first
+byte that follows the last byte of code in the program. When Interrupt
+27H is executed, the program terminates and control returns to MS-DOS,
+but the program is not overlaid by other programs. Files left open are not
+closed. When the interrupt is called, CS must contain the segment
+address of the Program Segment Prefix (the value of DS and ES when exe-
+cution started).
+
+.Exe programs that are loaded into high memory must not use this inter-
+rupt. Similarly, since it restores the Interrupt 22H, 23H, and 24H vectors,
+you should not use Interrupt 27H to install new CONTROL-C or critical-
+error handlers.
+
+
+48
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+  System Calls
+
+ _ ________________________
+
+
+Macro Definition:
+
+
+stay_resident macro last_instruc
+  mov dx,offset last_instruc
+  inc dx
+  int 27H
+  endm
+
+
+Example:
+
+Since the most common use of Interrupt 27H is to install a machine-
+specific routine, there is no general example that applies. The macro
+definition, however, shows the calling syntax.
+
+1.12 Function Requests
+
+The following pages describe function calls 00H-68H.
+
+
+  49
+
+_ _  |  |  _ _
+
+
+

@@ -1,0 +1,2 @@
+format.obj forproc.obj messages.obj oemfor.obj ..\..\libc\printf.obj
+format.exe /m;

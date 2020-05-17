@@ -1,0 +1,227 @@
+
+_ _  |  |  _ _
+
+
+Contents
+
+_ ________________________________________________________________
+
+1 System Calls 1
+
+ 1.1 Introduction 3
+ 1.2 Standard Character Device I/O 4
+ 1.3 Memory Management 5
+ 1.4 Process Management 7
+ 1.5 File and Directory Management 9
+ 1.6 Microsoft Networks 14
+ 1.7 National Language Support 15
+ 1.8 Miscellaneous System-Management Functions 16
+ 1.9 Old System Calls 17
+ 1.10 Using the System Calls 21
+ 1.11 Interrupts 35
+ 1.12 Function Requests 53
+
+2 MS-DOS Device Drivers 323
+
+ 2.1 Introduction 325
+ 2.2 Format of a Device Driver 326
+ 2.3 How to Create a Device Driver 328
+ 2.4 Installing Device Drivers 329
+ 2.5 Device Headers 330
+ 2.6 Request Header 334
+ 2.7 Device Driver Functions 337
+ 2.8 The Media Descriptor Byte 351
+ 2.9 Format of a Media Descriptor Table 351
+ 2.10 The CLOCK Device 353
+ 2.11 Anatomy of a Device Call 354
+ 2.12 Two Sample Device Drivers 355
+
+3 MS-DOS Technical Information 383
+
+ 3.1 Introduction 385
+ 3.2 MS-DOS Initialization 385
+ 3.3 The Command Processor 386
+ 3.4 MS-DOS Disk Allocation 387
+ 3.5 MS-DOS Disk Directory 387
+ 3.6 File Allocation Table (FAT) 390
+ 3.7 MS-DOS Standard Disk Formats 392
+
+4 MS-DOS Control Blocks
+ and Work Areas 395
+
+  iii
+
+_ _  |  |  _ _
+
+
+_ _  |  |  _ _
+
+Contents
+
+ 4.1 Introduction 397
+ 4.2 Typical Contents of an MS-DOS Memory Map 397
+ 4.3 MS-DOS Program Segment 398
+
+5 National Language Support 403
+
+ 5.1 Introduction 405
+ 5.2 National Language Support Calls 405
+ 5.3 Font Files 406
+
+6 .Exe File Structure and Loading 411
+
+ 6.1 Format of a File Header 413
+ 6.2 The Relocation Table 414
+
+7 Microsoft Relocatable
+ Object Module Formats 417
+
+ 7.1 Introduction 419
+ 7.2 Module Identification and Attributes 423
+ 7.3 Conceptual Framework for Fixups 425
+ 7.4 Record Sequence 431
+ 7.5 Introducing the Record Formats 433
+ 7.6 Microsoft Type Representations
+  for Communal Variables 460
+
+8 Programming Hints 463
+
+ 8.1 Introduction 465
+ 8.2 Interrupts 465
+ 8.3 System Calls 466
+ 8.4 Device Management 467
+ 8.5 Memory Management 468
+ 8.6 Process Management 468
+ 8.7 File and Directory Management 469
+ 8.8 Miscellaneous 471
+
+
+iv
+
+_ _  |  |  _ _
+
+
+_ _  |  |  _ _
+
+
+Figures
+
+_ ________________________________________________________________
+
+Figure 1.1 Example of the 8088 Registers 25
+
+Figure 1.2 Sample Program with Common Skeleton 26
+
+Figure 2.1 Sample Device Header 330
+
+Figure 2.2 Attribute Word for Character Devices 333
+
+Figure 2.3 Attribute Word for Block Devices 333
+
+Figure 2.4 Request Header 335
+
+Figure 2.5 Format of a Boot Sector 352
+
+Figure 2.6 Format of a Clock Device 354
+
+Figure 4.1 Program Segment Prefix 402
+
+Figure 5.1 Font File Structure 407
+
+Figure 7.1 Location Types 427
+
+
+
+  v
+
+_ _  |  |  _ _
+
+
+_ _  |  |  _ _
+
+
+Tables
+
+_ ________________________________________________________________
+
+Table 1.1 Standard Character I/O Function Requests 4
+
+Table 1.2 Memory Management Function Requests 5
+
+Table 1.3 Process-Management Function Requests 7
+
+Table 1.4 Predefined Device Handles 9
+
+Table 1.5 File-Related Function Requests 10
+
+Table 1.6 File-Sharing Function Requests 11
+
+Table 1.7 Device-Related Function Requests 12
+
+Table 1.8 Directory-Related Function Requests 12
+
+Table 1.9 File Attributes 13
+
+Table 1.10 Microsoft Networks Function Requests 14
+
+Table 1.11 National Language-Support Function Requests 15
+
+Table 1.12 Miscellaneous System-Management Function Requests 16
+
+Table 1.13 Old System Calls and Their Replacements 17
+
+Table 1.14 Format of the File Control Block (FCB) 18
+
+Table 1.15 Error Codes Returned in AX 22
+
+Table 1.16 MS-DOS Interrupts, Numeric Order 27
+
+Table 1.17 MS-DOS Interrupts, Alphabetic Order 27
+
+Table 1.18 MS-DOS Function Requests, Numeric Order 28
+
+Table 1.19 MS-DOS Function Requests, Alphabetic Order 31
+
+Table 1.20 Bit values for Function 29H 133
+
+Table 1.21 Sharing Mode Bit Values 174
+
+Table 1.22 Access Code Bit Values 175
+
+Table 1.23 MS-DOS Data Bit Values 193
+
+Table 1.24 Contents of the Parameter Block 239
+
+Table 1.25 Contents of the Parameter Block 243
+
+Table 1.26  250
+
+Table 1.27 Allocation Strategy 263
+
+Table 2.1 For Character Devices: 331
+
+vi
+
+_ _  |  |  _ _
+
+
+_ _  |  |  _ _
+
+  Contents
+
+Table 2.2 For Block Devices: 331
+
+Table 3.1 MS-DOS Standard Removable-Disk Formats 393
+
+Table 3.2 MS-DOS Standard Removable Disk Formats (High-Density) 393
+
+Table 7.1 Object Module Record Formats 419
+
+Table 7.2 Combination Attribute Example 438
+
+
+
+  vii
+
+_ _  |  |  _ _
+

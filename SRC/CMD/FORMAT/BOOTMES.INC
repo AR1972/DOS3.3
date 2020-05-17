@@ -1,0 +1,9 @@
+;	SCCSID = @(#)bootmes.inc	1.1 85/04/18
+
+; Message Include file for OEMFOR.ASM
+
+; THIS IS A SPECIAL MESSAGE WHICH IS INCLUDED IN THE "FAKE" IO.SYS
+;  FILE PLACED ON DISKS FORMATTED /B. NOTE THAT IT IS NUL TERMINATED.
+
+NO_SYS_MESS:
+	DB	"Non-System disk or disk error",13,10,0

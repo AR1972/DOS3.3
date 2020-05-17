@@ -1,0 +1,393 @@
+
+_ _  |  |  _ _
+
+  MS-DOS Control Blocks and Work Areas
+
+ _ ______________________________________________
+
+
+4.1 Introduction
+
+This chapter describes a typical MS-DOS memory map and explains how a
+program is loaded into memory. It also describes the structure of an
+MS-DOS program segment and the contents of register segments for .exe
+and .com program files.
+
+4.2 Typical Contents of an MS-DOS Memory
+Map
+
+A typical MS-DOS memory map contains the following information:
+
+
+ +-----------------------------------------------------+
+ | ROM and Video Buffers |
+ +-----------------------------------------------------+
+ | Transient Part of COMMAND.COM |
+ +-----------------------------------------------------+
+ | |
+ | |
+ | |
+ | |
+ | Transient Program Area |
+ |- - - - - - - - - - - - - - - - - - - - - - - - - - -|
+ | |
+ | |
+ | |
+ | |
+ | External Commands and Utilities |
+ | |
+ +-----------------------------------------------------+
+ | Resident Part of COMMAND.COM |
+ +-----------------------------------------------------+
+ | MS-DOS buffers, control areas, & installed drivers |
+ +-----------------------------------------------------+
+ | |
+ | MSDOS.SYS |
+ +-----------------------------------------------------+
+ | IO.SYS and resident device drivers |
+ +-----------------------------------------------------+
+ | Interrupt Vectors |
+ 0 +-----------------------------------------------------+
+
+During system initialization, MS-DOS loads the io.sys and msdos.sys files
+into low memory (Note that in MS-DOS 3.3, these files are not required to
+be written contiguously to the disk). The io.sys system file is the MS-DOS
+interface to hardware. The msdos.sys system file includes MS-DOS inter-
+rupt handlers, service routines (Interrupt 21H functions).
+
+  3
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+Next, the system initialization routine loads the resident and installable
+device drivers. Above the installable device drivers, MS-DOS writes the
+resident part of command.com. This part includes interrupt handlers for
+Interrupts 22H (Terminate Process Exit Address), 23H (CONTROL-C
+Handler Address), 24H (Critical-Error-Handler Address) and code to reload
+the transient part. The transient part of command.com is reloaded into
+high memory. It includes the command interpreter, the internal MS-DOS
+commands, and the batch processor.
+
+External command and utility (.com and .exe) files are loaded into the
+transient program area. MS-DOS also allocates 256 bytes for user stack
+used with .com files. User memory is allocated from the lowest end of
+available memory that fulfills the allocation request.
+
+4.3 MS-DOS Program Segment
+
+When you type an external command or execute a program through Func-
+tion 4BH (Load and Execute Program, also called EXEC), MS-DOS deter-
+mines the lowest available free memory address to use as the start of the
+program. The memory starting at this address is called the Program Seg-
+ment.
+
+The EXEC system call sets up the first 256 bytes of the Program Segment
+for the program being loaded into memory. The program is then loaded
+following this block. An .exe file with minalloc and maxalloc both set to
+zero is loaded as high as possible.
+
+At offset 0 within the Program Segment, MS-DOS builds the Program Seg-
+ment Prefix control block. The program returns from EXEC by one of five
+methods:
+
+ o By issuing an Interrupt 21H with AH=4CH
+
+ o By issuing an Interrupt 21H with AH=31H (Keep Process)
+
+ o By a long jump to offset 0 in the Program Segment Prefix
+
+ o By issuing an Interrupt 20H with CS:0 pointing at the PSP
+
+ o By issuing an Interrupt 21H with register AH=0 and with CS:0
+ pointing at the PSP
+
+_ ________________________________________________________________
+
+Note
+
+ The first two methods are preferred for functionality, compatibility,
+ and efficiency in future versions of MS-DOS.
+
+_ ________________________________________________________________
+
+4
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+  MS-DOS Control Blocks and Work Areas
+
+ _ ______________________________________________
+
+All five methods transfer control to the program that issued the EXEC
+call. The first two methods return a completion code. They also restore
+the addresses of Interrupts 22H, 23H, and 24H (Terminate Process Exit
+Address, CONTROL-C Handler Address, and Critical-Error-Handler Address)
+from the values saved in the Program Segment Prefix of the terminating
+program. Control then passes to the terminate address.
+
+If a program returns to command.com, control transfers to the resident
+portion. If the program is a batch file (in process), it continues. Other-
+wise, command.com performs a checksum on the transient part, reloads it
+if necessary, issues the system prompt, and waits for you to type another
+command.
+
+When a program receives control, the following conditions are in effect:
+
+For all programs:
+
+ o The segment address of the passed environment is at offset 2CH in
+ the Program Segment Prefix.
+
+ o The environment is a series of ASCII strings (totaling less than 32K)
+ in the form:
+
+ NAME=parameter
+
+ o A byte of zeros terminates each string, and another byte of zeros
+ terminates the set of strings.
+
+ Following the last byte of zeros is a set of initial arguments that
+ the operating system passes to a program. This set of arguments
+ contains a word count followed by an ASCII string. If the file is in
+ the current directory, the ASCII string contains the drive and path-
+ name of the executable program as passed to the EXEC function
+ call. If the file is not in the current directory, EXEC concatenates
+ the name of the file with the name of the path. Programs may use
+ this area to determine where the program was loaded.
+
+ o The environment built by the command processor contains at least
+ a comspec= string (the parameters on comspec define the path
+ that MS-DOS uses to locate command.com on disk). The last path
+ and prompt commands issued are also in the environment, along
+ with any environment strings you have defined with the MS-DOS
+ set command.
+
+ o EXEC passes a copy of the invoking process environment. If your
+ application uses a "keep process" concept, you should be aware
+ that the copy of the environment passed to you is static. That is,
+ it will not change even if you issue subsequent set, path, or
+ prompt commands. Conversely, any modification of the passed
+ environment by the application is not reflected in the parent pro-
+ cess environment. For instance, a program cannot change the
+ MS-DOS environment values as the set command does.
+
+  5
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+ o The Disk Transfer Address (DTA) is set to 80H (default DTA in the
+ Program Segment Prefix). The Program Segment Prefix contains
+ file control blocks at 5CH and 6CH. MS-DOS formats these blocks
+ using the first two parameters that you typed when entering the
+ command. If either parameter contained a pathname, then the
+ corresponding FCB contains only the valid drive number. The
+ filename field is not valid.
+
+ o An unformatted parameter area at 81H contains all the characters
+ typed after the command (including leading and embedded delim-
+ iters), with the byte at 80H set to the number of characters. If you
+ type <, >, or parameters on the command line, they do not
+ appear in this area (nor the filenames associated with them).
+ Redirection of standard input and output is transparent to appli-
+ cations.
+
+ o Offset 6 (one word) contains the number of bytes available in the
+ segment.
+
+ o Register AX indicates whether the drive specifiers (entered with the
+ first two parameters) are valid, as follows:
+
+ AL=FF if the first parameter contained an invalid drive specifier
+ (otherwise AL=00)
+
+ AH=FF if the second parameter contained an invalid drive
+ specifier (otherwise AH=00)
+
+ o Offset 2 (one word) contains the segment address of the first byte
+ of unavailable memory. Programs must not modify addresses
+ beyond this point unless these addresses were obtained by allocat-
+ ing memory via Function 48H (Allocate Memory).
+
+
+For Executable (.exe) Programs:
+
+ o DS and ES registers point to the Program Segment Prefix.
+
+ o CS,IP,SS, and SP registers contain the values that Microsoft link
+ sets in the .exe image.
+
+
+For Executable (.com) Programs:
+
+ o All four segment registers contain the segment address of the ini-
+ tial allocation block that starts with the Program Segment Prefix
+ control block.
+
+ o .com programs allocate all of user memory. If the program invokes
+ another program through Function 4BH (EXEC), it must first free
+ some memory through Function 4AH (Set Block) to provide space
+ for the program being executed.
+
+
+
+6
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+  MS-DOS Control Blocks and Work Areas
+
+ _ ______________________________________________
+
+ o The Instruction Pointer (IP) is set to 100H.
+
+ o The Stack Pointer register is set to the end of the program's seg-
+ ment. The segment size at offset 6 is reduced by 100H to allow for
+ a stack of that size.
+
+ o A .com program places a word of zeros on top of the stack. Then
+ by doing a RET instruction last, your program can exit to
+ command.com. This method assumes, however, that you have
+ maintained your stack and code segments.
+
+Figure 4.1 illustrates the format of the Program Segment Prefix. All
+offsets are in hexadecimal.
+
+ (Offsets in Hex)
+0 -----------------------------------------------------------
+ | | End of | |
+ | INT 20H | alloc. | Reserved |
+ | | block | 04H |
+8 -----------------------------------------------------------
+ | | Terminate address | CONTROL-C exit |
+ | Reserved | (IP, CS) | address (IP) |
+ | | | |
+10-----------------------------------------------------------
+ |CONTROL-C | Hard error exit address | |
+ |exit | (IP, CS) | |
+ |address (CS)| | |
+ ---------------------------------------- |
+ | |
+ | Used by MS-DOS |
+ | |
+ | 5CH |
+ | |
+ -----------------------------------------------------------
+ | |
+ | Formatted Parameter Area 1 formatted as standard |
+ | unopened FCB 6CH |
+ -----------------------------------------------------------
+ | |
+ | Formatted Parameter Area 2 formatted as standard |
+ | unopened FCB (overlaid if FCB at 5CH is opened) |
+80-----------------------------------------------------------
+ | Unformatted Parameter Area |
+ | (default Disk Transfer Area) |
+ | Initially contains command invocation line. |
+ -----------------------------------------------------------
+100
+
+
+ Figure 4.1 Program Segment Prefix
+
+_ ________________________________________________________________
+
+Important 
+
+  7
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+ Programs must not alter any part of the Program Segment Prefix
+ below offset 5CH.
+
+_ ________________________________________________________________
+
+
+
+8
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Chapter 4
+
+MS-DOS Control Blocks
+
+and Work Areas
+
+_ ________________________________________________________________
+
+4.1 Introduction 3
+
+4.2 Typical Contents of an MS-DOS Memory Map 3
+
+4.3 MS-DOS Program Segment 4
+
+
+
+  1
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+8
+
+_ _  |  |  _ _
+
+
+

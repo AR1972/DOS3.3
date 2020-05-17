@@ -1,0 +1,38 @@
+#**     makefile for Boot
+
+DEST	= msboot
+MSG	= messages
+
+#	Path definitions
+
+BIOS	= ..\..\BIOS
+DOS	= ..\..\DOS
+
+#       Definitions for assembler
+
+ASM	= masm
+AFLAGS	= -Mx -t
+AINC	= -I..\..\inc
+
+#       Definitions for C compiler
+
+CC	= cl
+CFLAGS	= -Ox -Zlp
+CINC	= -I..\..\h
+
+#	Definitions for linker
+
+LINK	= link
+LIBC	= ..\..\libc
+
+
+# Rules and Dependencies follow
+
+msboot.obj: msboot.asm $(MSG).inc
+	masm $(AFLAGS) $(AINC) msboot;
+
+msboot.bin: msboot.obj
+	LINK msboot;
+	EXE2BIN msboot.exe msboot.bin
+	DEL msboot.exe
+	DBOF msboot.bin boot.inc 7C00 200

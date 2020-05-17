@@ -1,0 +1,623 @@
+
+_ _  |  |  _ _
+
+  MS-DOS Technical Information
+
+ _ _______________________________________
+
+
+3.1 Introduction
+
+This chapter describes how MS-DOS initializes and how it allocates disk
+space for the root directory, the File Allocation Tables (FAT), and the
+data area. For programmers writing installable device drivers, this
+chapter explains MS-DOS disk directory entries and File Allocation
+Tables. At the end of the chapter, Tables 3.1 and 3.2 describe MS-DOS
+standard formats for floppy disks.
+
+3.2 MS-DOS Initialization
+
+MS-DOS initialization consists of several steps. When you reset your com-
+puter or turn on its power, the ROM (Read Only Memory) BIOS is invoked
+and performs hardware checks and initialization. The ROM BIOS then
+examines drive A for the boot sector. If it locates a boot sector, the ROM
+BIOS reads it into low memory and gives it control. If it doesn't find the
+boot sector, the ROM BIOS then looks in the active partition of the hard
+disk. If it still doesn't find the boot sector, the ROM BIOS then invokes
+ROM BASIC.
+
+On a removable disk (3.5-inch, 5.25-inch, or 8-inch disk), the boot sector
+sector is always located on track 0, sector 1, side 0 of the disk. On a hard
+disk, the boot sector begins on the first sector of the MS-DOS partition.
+The hard disk boot sector also includes a partition table. This table
+identifies the active MS-DOS partition and any other partitions, such as
+an extended MS-DOS partition, on the hard disk. Note that extended
+MS-DOS partitions are not bootable.
+
+The boot sector then reads the following files, in the order listed:
+
+io.sys
+msdos.sys
+
+_ ________________________________________________________________
+
+Note 
+
+ Versions of MS-DOS prior to 3.3 required the io.sys file to be contigu-
+ ous. This is no longer a requirement.
+
+_ ________________________________________________________________
+
+Next, the system initialization routine SYSINIT loads all of the resident
+device drivers. Then, it searches for a config.sys file on the boot disk.
+SYSINIT allocates memory for buffers and files, based on settings in the
+config.sys file, or system default settings. If the config.sys file specifies any
+
+  3
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+installable device drivers, these are installed next.
+
+Finally, SYSINIT executes the MS-DOS command processor,
+command.com.
+
+3.3 The Command Processor
+
+The command processor command.com consists of three parts:
+
+ o A resident part resides in memory immediately following msdos.sys
+ and its data area. This part contains routines to process Inter-
+ rupts 22H (Terminate Process Exit Address), 23H (CONTROL-C Exit
+ Address), and 24H (Critical-Error-Handler Address), as well as a
+ routine to reload the transient part, if needed. All standard
+ MS-DOS error handling is done within this part of command.com.
+ This includes displaying error messages and processing the Abort,
+ Retry, Fail, or Ignore messages.
+
+ o An initialization part follows the resident part. During startup, the
+ initialization part is given control; it contains the processor setup
+ routine in the autoexec.bat file. The initialization part determines
+ the segment address at which programs can be loaded, and because
+ it is no longer needed, is overlaid by the first program that
+ command.com loads.
+
+ o A transient part is loaded at the high end of memory. This part
+ contains all the internal command processors and the batch file
+ processor.
+
+ The transient part of the command processor produces the system
+ prompt (A>, for example), reads commands from the keyboard (or
+ from batch files), and causes them to be executed. For external
+ commands, the transient part builds a command line and issues
+ Function 4BH (Load and Execute Program) to load and transfer
+ control to the program.
+
+
+3.4 MS-DOS Disk Allocation
+
+The area on a disk partitioned for use by MS-DOS is formatted as follows:
+
+ 1. Reserved area\(emvariable size
+
+ 2. First copy of File Allocation Table\(emvariable size
+
+
+
+4
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+  MS-DOS Technical Information
+
+ _ _______________________________________
+
+ 3. Additional copies of File Allocation Table\(emvariable size (optional)
+
+ 4. Root directory\(emvariable size
+
+ 5. File data area
+
+Space for a file in the data area is not preallocated. The space is allocated
+one cluster at a time. A cluster consists of one or more consecutive sectors
+(the number of sectors in a cluster must be a power of 2); the cluster size is
+determined at format time. All the clusters for a file are "chained"
+together in the File Allocation Table, discussed in greater detail in Section
+3.5, "File Allocation Table (FAT)." MS-DOS normally keeps a second copy
+of the FAT for consistency, except in the case of reliable storage such as a
+virtual RAM disk. Should the disk develop a bad sector in the middle of
+the first FAT, MS-DOS can use the second. This avoids loss of data due to
+an unreadable FAT.
+
+3.5 MS-DOS Disk Directory
+
+The format utility builds the root directory for all disks. This directory's
+location on the disk and the maximum number of entries are dependent on
+the media. Specifications for standard removable-disk formats are outlined
+later in this chapter. Note, however, that MS-DOS regards directories,
+other than the root directory, as files, so there is no limit to the number of
+files that the subdirectories under the root directory may contain.
+
+All directory entries are 32 bytes in length and are in the following format
+(note that byte offsets are in hexadecimal):
+
+Byte
+ Function
+_ ________________________________________________________________
+
+
+0-7 Filename. Eight characters, left-aligned and padded, if neces-
+ sary, with blanks. The first byte of this field indicates the file
+ status as follows:
+ _ _____________________________________________________
+
+ 00H The directory entry has never been used. This is used
+ to limit the length of directory searches, for perfor-
+ mance reasons.
+
+ 05H The first character of the filename contains an E5H
+ character.
+
+ 2EH The entry is for a directory. If the second byte is also
+ 2EH, the cluster field contains the cluster number of
+ this directory's parent directory (0000H if the parent
+ directory is the root directory). Otherwise, bytes 01H
+ through 0AH are all spaces, and the cluster field con-
+ tains the cluster number of this directory.
+
+  5
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+ E5H The file was used, but it has since been erased.
+
+ Any other character is the first character of a filename.
+
+8-0A Filename extension.
+
+0B File attribute. The attribute byte is mapped as follows
+ (values are in hexadecimal):
+
+
+ Byte
+ Contents
+ _ _____________________________________________________
+
+ 01H File is marked read-only. An attempt to open the file
+ for writing using Function 3DH (Open Handle) results
+ in an error code being returned. This value can be
+ used in programs along with the other attributes in
+ this list. Attempts to delete the file with Function
+ 13H (Delete File) or Function 41H (Delete Directory
+ Entry) will also fail.
+
+ 02H Hidden file. The file is excluded from normal directory
+ searches.
+
+ 04H System file. The file is excluded from normal directory
+ searches.
+
+ 08H The entry contains the volume label in the first 11
+ bytes. The entry contains no other usable information
+ (except date and time of creation), and may exist only
+ in the root directory.
+
+ 10H The entry defines a subdirectory, and is excluded from
+ normal directory searches.
+
+ 20H Archive bit. The bit is set to "on" whenever the file
+ has been written to and closed.
+
+ Note: The system files (io.sys and msdos.sys) are
+ marked as read-only, hidden, and system files. Files
+ can be marked hidden when they are created. Also,
+ you may change the read-only, hidden, system, and
+ archive attributes through Function 43H (Get/Set File
+ Attributes).
+
+0C-15 Reserved.
+
+16-17 Time the file was created or last updated. The hour, minutes,
+ and seconds are mapped into two bytes as follows (bit 7 on
+ the left, 0 on the right):
+
+ Offset 17H
+ | H | H | H | H | H | M | M | M |
+
+ Offset 16H
+ | M | M | M | S | S | S | S | S |
+
+6
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+  MS-DOS Technical Information
+
+ _ _______________________________________
+
+ where:
+
+ H is the binary number of hours (0-23).
+ M is the binary number of minutes (0-59).
+ S is the binary number of two-second increments.
+
+
+18-19 Date the file was created or last updated. The year, month,
+ and day are mapped into two bytes as follows:
+
+ Offset 19H
+ | Y | Y | Y | Y | Y | Y | Y | M |
+
+ Offset 18H
+ | M | M | M | D | D | D | D | D |
+
+ where:
+
+ Y is the year, 0-119 (1980-2099).
+ M is the month (1-12).
+ D is the day of the month (1-31).
+
+
+1A-1B Starting cluster; the number of the first cluster in the file.
+
+ o Note that the first cluster for data space on all disks is
+ cluster 002.
+
+ o The cluster number is stored with the least significant
+ byte first.
+
+ o For details about converting cluster numbers to logical
+ sector numbers, see Sections 3.5.1 and 3.5.2.
+
+
+1C-1F File size in bytes. The first word of this four-byte field is the
+ low-order part of the size.
+
+
+3.6 File Allocation Table (FAT)
+
+This section explains how MS-DOS allocates disk space in the data area
+for a file by using the File Allocation Table to convert the clusters of a file
+to logical sector numbers. The device driver is then responsible for locat-
+ing the logical sector on the disk. Programs should use the MS-DOS file
+management function calls for accessing files. Programs that access the
+FAT are not guaranteed to be upwardly-compatible with future releases of
+MS-DOS. The following information is useful to system programmers who
+wish to write installable device drivers.
+
+The File Allocation Table is an array of 12-bit entries (1.5 bytes) for each
+cluster on the disk. For disks containing more than 4085 clusters, a 16-bit
+FAT entry is used.
+
+
+
+  7
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+The first two FAT entries are reserved; however, the device driver may use
+the first byte as a FAT ID byte for determining media. For hard disks, the
+value of this byte is F8H. See Tables 3.1 and 3.2 for the media byte
+descriptors used for 8-inch, 5.25-inch, and 3.5-inch disks.
+
+The third FAT entry, which starts at byte offset 4, begins the mapping of
+the data area (cluster 002). The operating system does not always sequen-
+tially write (to the disk) files in the data area. Instead, the system allo-
+cates the data area one cluster at a time, skipping over clusters it has
+already allocated. The first free cluster following the last cluster allocated
+for that file is the next cluster allocated, regardless of its physical location
+on the disk. This permits the most efficient use of disk space, since if you
+erase old files, you can free clusters, which the operating system can then
+allocate for new files.
+
+Each FAT entry contains three or four hexadecimal characters, depending
+on whether it is a 12-bit or 16-bit entry:
+
+_ ________________________________________________________________
+
+(0)000 If the cluster is unused and available.
+
+(F)FF7 The cluster has a bad sector in it if it is not part of any
+ cluster chain. MS-DOS will not allocate such a cluster. So
+ for its report, the chkdsk command counts the number of
+ bad clusters, which are not part of any allocation chain.
+
+(F)FF8-FFF The last cluster of a file.
+
+(X)XXX Any other characters that are the cluster number of the
+ next cluster in the file. The number of the first cluster in
+ the file is in the file's directory entry.
+
+The File Allocation Table always begins on the first sector after the
+reserved sectors. If the FAT is larger than one sector, the sectors are con-
+tiguous. The operating system usually writes two copies of the FAT to
+preserve data integrity. MS-DOS reads the FAT into one of its buffers,
+whenever needed (open, read, write, etc.). The operating system also gives
+this buffer a high priority to keep it in memory as long as possible.
+
+3.6.1 How to Use the FAT (12-Bit FAT Entries)
+
+To get the starting cluster of a file, examine its directory entry (in the
+FAT). Then, to locate each subsequent cluster of the file, follow these
+steps:
+
+ 1. Multiply the cluster number just used by 1.5 (each FAT entry is
+ 1.5 bytes in length).
+
+ 2. The whole part of the product is an offset into the FAT, pointing
+ to the entry that maps the cluster just used. That entry contains
+ the cluster number of the next cluster of the file.
+
+8
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+  MS-DOS Technical Information
+
+ _ _______________________________________
+
+ 3. Use a MOV instruction to move the word at the calculated FAT
+ offset into a register.
+
+ 4. If the last cluster used was an even number, keep the low-order 12
+ bits of the register by using the AND operator with 0FFFH and the
+ register. If the last cluster used was an odd number, keep the
+ high-order 12 bits by using the SHR instruction to shift the register
+ right four bits.
+
+ 5. If the resultant 12 bits are 0FF8H-0FFFH, the file contains no
+ more clusters. Otherwise, the 12 bits contain the number of the
+ next cluster in the file.
+
+To convert the cluster to a logical sector number (relative sector, such as
+that used by Interrupts 25H and 26H (Absolute Disk Read/Write) and by
+debug), follow these steps:
+
+ 1. Subtract two from the cluster number.
+
+ 2. Multiply the result by the number of sectors per cluster.
+
+ 3. To this result, add the logical sector number of the beginning of
+ the data area.
+
+
+3.6.2 How to Use the FAT (16-Bit FAT Entries)
+
+To get the starting cluster of a file, examine its directory entry (in the
+FAT). Then, to find the next file cluster, follow these steps:
+
+ 1. Multiply the cluster number last used by 2 (each FAT entry is 2
+ bytes).
+
+ 2. Use a MOV WORD instruction to move the word at the calculated
+ FAT offset into a register.
+
+ 3. If the resultant 16 bits are 0FFF8-0FFFH, no more clusters are in
+ the file. Otherwise, the 16 bits contain the number of the next
+ cluster in the file.
+
+
+3.7 MS-DOS Standard Disk Formats
+
+MS-DOS arranges data clusters on a disk to minimize head movement.
+MS-DOS then allocates all the space on one track (or cylinder) before mov-
+ing to the next. It uses the sequential sectors on the lowest-numbered
+head, then all the sectors on the next head, and so on, until it has used all
+the sectors on all the heads of the track.
+
+
+
+  9
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+The size of the MS-DOS partition on a hard disk determines the size of the
+FAT and root directory. Likewise, the type of floppy disk (tracks per side,
+sectors per track, etc.) determines how MS-DOS uses the disk. The remov-
+able disk formats listed in Tables 3.1 and 3.2 are standard and should be
+readable in the appropriate standard drive.
+
+
+10
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+  MS-DOS Technical Information
+
+ _ _______________________________________
+
+Table 3.1
+
+MS-DOS Standard Removable-Disk Formats
+
+_ _________________________________________________________________________
+
+Disk Size in inches  5.25  8 
+
+_ _________________________________________________________________________
+
+WORD no. heads   1  1  2  2  1  2  1
+
+Tracks/side   40  40  40  40  77  77  77
+
+WORD sectors/track   8  9  8  9  26  26  8
+
+WORD bytes/sector   512  512  512  512  128  128  024
+
+BYTE sectors/ cluster   1  1  2  2  4  4  1
+
+WORD reserved sectors   1  1  1  1  1  4  1
+
+Byte no. FATs   2  2  2  2  2  2  2
+
+WORD root directory entries   64  64  112  112  68  68  192
+
+WORD no. sectors   320  360  640  720  2002  2002  616
+
+BYTE media descriptor   FE  FC  FF  FD  *FE  FD  *FE
+
+WORD sectors/FAT   1  2  1  2  6  6  2
+
+WORD no. hidden sectors   0  0  0  0  0  0  0
+
+_ _________________________________________________________________________
+
+*The two media descriptor bytes are the same for 8" disks (FEH). This is not a misprint. To
+establish whether a disk is single- or double-density, try a read of a single-density address
+mark. If an error occurs, the media is double-density.
+
+Table 3.2
+
+MS-DOS Standard Removable Disk Formats (High-Density)
+
+_ _________________________________________________________________________
+
+Disk Size in inches  3.5 or 5.25   3.5   5.25 
+
+_ _________________________________________________________________________
+
+WORD no. heads   1  2  2  2  2  2
+
+Tracks/side   80  80  80  80  80  80
+
+WORD sectors/track   8  9  8  9  18  15
+
+WORD bytes/sector   512  512  512  512  512  512
+
+BYTE sectors/cluster   2  2  2  2  1  1
+
+WORD reserved sectors   1  1  1  1  1  1
+
+BYTE no. FATs   2  2  2  2  2  2
+
+WORD root dir entries   112  112  112  112  224  224
+
+WORD no. sectors   640  720  1280  1440  2880  2400
+
+BYTE media descriptor*   FA  FC  FB  F9  F0  F9
+
+WORD sectors/FAT   1  2  2  3  9  7
+
+WORD no. hidden sectors   0  0  0  0  0  0
+
+_ _________________________________________________________________________
+
+*The value F0H in the media descriptor byte may be used to describe other media types.
+
+
+  11
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Chapter 3
+
+MS-DOS Technical Information
+
+_ ________________________________________________________________
+
+3.1 Introduction 3
+
+3.2 MS-DOS Initialization 3
+
+3.3 The Command Processor 4
+
+3.4 MS-DOS Disk Allocation 4
+
+3.5 MS-DOS Disk Directory 5
+
+3.6 File Allocation Table (FAT) 7
+
+3.6.1 How to Use the FAT (12-Bit FAT Entries) 8
+
+3.6.2 How to Use the FAT (16-Bit FAT Entries) 9
+
+3.7 MS-DOS Standard Disk Formats 9
+
+
+
+12
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+12
+
+_ _  |  |  _ _
+
+
+

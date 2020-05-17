@@ -1,0 +1,58 @@
+#**     makefile for format
+
+DEST	=format
+MSG	=messages
+
+#	Path definitions
+
+BIOS	=..\..\BIOS
+BOOT	=..\..\BOOT
+DOS	=..\..\DOS
+
+#       Definitions for assembler
+
+ASM	=masm
+AFLAGS	=-Mx -t
+AINC	=-I..\..\inc -I$(DOS)
+
+#       Definitions for C compiler
+
+CC	=cl
+CFLAGS	=-c -Ox -Zlp
+CINC	=-I..\..\h
+
+#	Definitions for linker
+
+LINK	=link
+LIBC	=..\..\libc
+
+
+# Rules and Dependencies follow
+
+filesize.inc:	$(DOS)\msdos.sys $(BIOS)\io.sys
+	GWBASIC MAKE_INC
+
+FORMAT.OBJ: FORMAT.ASM $(DOS)\DOSMAC.INC $(DOS)\BPB.INC \
+     $(DOS)\DIRENT.INC $(DOS)\DPB.INC $(DOS)\CURDIR.INC \
+     $(DOS)\CPMFCB.INC $(DOS)\PDB.INC \
+     $(DOS)\ERROR.INC $(DOS)\SYSCALL.INC $(DOS)\IOCTL.INC
+	masm $(AFLAGS) $(AINC) FORMAT;
+
+$(MSG).OBJ: $(MSG).ASM $(MSG).inc
+	masm $(AFLAGS) $(AINC) $(MSG);
+
+FORPROC.OBJ: FORPROC.ASM $(DOS)\SYSCALL.INC
+	masm $(AFLAGS) $(AINC) FORPROC;
+
+OEMFOR.OBJ: OEMFOR.ASM $(DOS)\DOSMAC.INC $(DOS)\SYSCALL.INC $(DOS)\BPB.INC \
+     $(DOS)\DIRENT.INC bootmes.inc $(DOS)\IOCTL.INC \
+     $(BOOT)\BOOT.INC $(BOOT)\BOOT11.INC filesize.inc
+	masm $(AFLAGS) $(AINC) OEMFOR;
+	
+$(LIBC)\printf.obj: $(LIBC)\printf.asm
+	masm $(AFLAGS) $(AINC) $(LIBC)\printf,$(LIBC)\printf;
+
+FORMAT.EXE:	FORMAT.OBJ FORPROC.OBJ $(MSG).OBJ OEMFOR.OBJ $(LIBC)\PRINTF.OBJ
+	LINK  @FORMAT.LNK
+	convert format.exe
+	del format.exe

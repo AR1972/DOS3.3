@@ -1,0 +1,3710 @@
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Write Handle (Function 40H)
+
+ Call:
+
+ AH = 40H
+ BX
+  Handle
+ CX
+  Bytes to write
+ DS:DX
+  Pointer to buffer
+
+ Return:
+
+ Carry set:
+ AX
+  5 = Access denied
+  6 = Invalid handle
+ Carry not set:
+ AX
+  Bytes written
+
+
+Comments:
+
+Function 40H writes to the file or device associated with the specified han-
+dle. BX must contain the handle. CX must contain the number of bytes to
+be written. DX must contain the offset (to the segment address in DS) of
+the data to be written.
+
+If you set CX to zero, the file will be truncated at the current position of
+the file pointer. MS-DOS will not perform the write if the handle is read-
+only.
+
+If there is no error, AX returns the number of bytes written. Be sure to
+check AX after performing a write. If its value is less than the number in
+CX when the call was made, it indicates an error, even though the carry
+flag isn't set. If AX contains 0, and if the target is a disk file, the disk is
+full.
+
+If you use this function request to write to standard output, you can
+redirect the output. If you call this request with CX=0, the file size is set
+to the value of the read/write pointer. To satisfy the new file size, alloca-
+tion units are allocated or released, as required.
+
+If there is an error, the carry flag (CF) is set and the error code returns in
+AX:
+
+Code
+
+  1
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+ Meaning
+_ ________________________________________________________________
+
+5 Handle not open for writing
+
+6 Handle not open or invalid
+
+
+Macro Definition:
+
+
+write_handle macro handle,buffer,bytes
+  mov bx,handle
+  mov dx,offset buffer
+  mov cx,bytes
+  mov ah,40H
+  int 21H
+  endm
+
+
+Example:
+
+The following program creates a file named dir.tmp, containing the
+filename and extension of each file in the current directory, in the current
+directory on the disk in drive B.
+
+srch_file db "b:*.*",0
+tmp_file db "b:dir.tmp",0
+buffer db 43 dup (?)
+handle dw ?
+;
+begin: set_dta buffer ;See Function 1AH
+ find_first_file srch_file,16H ;Check directory
+ cmp ax,12H ;Directory empty?
+ je return ;Yes, go home
+ create_handle tmp_file,0 ;See Function 3CH
+ jc error_create ;Routine not shown
+ mov handle,ax ;Save handle
+write_it: write_handle handle,buffer[1EH],12 ;THIS FUNCTION
+ jc error_write ;Routine not shown
+ find_next_file ;Check directory
+ cmp ax,12H ;Another entry?
+ je all_done ;No, go home
+ jmp write_it ;Yes, write record
+all_done: close_handle handle ;See Function 3EH
+ jc error_close ;Routine not shown
+
+
+
+2
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Delete Directory Entry [Unlink] (Function 41H)
+
+ Call:
+
+ AH = 41H
+ DS:DX
+  Pointer to pathname
+
+ Return:
+
+ Carry set:
+ AX
+  2 = File not found
+  3 = Path not found
+  5 = Access denied
+ Carry not set:
+  No error
+
+
+
+Comments:
+
+Function 41H erases a file by deleting its directory entry. DX must con-
+tain the offset (from the segment address in DS) of an ASCIZ string that
+specifies the pathname of the file that you want to delete. You cannot use
+wildcard characters.
+
+If the file exists and is not read-only, the call deletes it. If there is an error,
+the call sets the carry flag (CF) and the error code returns in AX:
+
+Code
+ Meaning
+_ ________________________________________________________________
+
+2 File doesn't exist, or specifies a directory
+
+3 Path is invalid
+
+5 File is read-only
+
+To delete a file with the read-only attribute, first change its attribute to 0
+with Function 43H (Get/Set File Attribute).
+
+
+  3
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Macro Definition:
+
+
+delete_entry macro path
+  mov dx,offset path
+  mov ah,41H
+  int 21H
+  endm
+
+
+Example:
+
+The following program deletes all files, dated before December 31, 1986,
+from the disk in drive B.
+
+year db 1986
+month db 12
+day db 31
+files db ?
+message db "NO FILES DELETED.",0DH,0AH,"$"
+path db "b:*.*", 0
+buffer db 43 dup (?)
+;
+begin: set_dta buffer ;See Function 1AH
+ select_disk "B" ;See Function 0EH
+ find_first_file path,0 ;See Function 4EH
+ jnc compare ;got one
+ jmp all_done ;no match, go home
+compare: convert_date buffer[-1] ;See end of chapter
+ cmp cx,year ;After 1986?
+ jg next ;Yes, don't delete
+ cmp dl,month ;After December?
+ jg next ;Yes, don't delete
+ cmp dh,day ;31st or after?
+ jge next ;Yes, don't delete
+ delete_entry buffer[1EH] ;THIS FUNCTION
+ jc error_delete ;Routine not shown
+ inc files ;Bump file counter
+next: find_next_file ;Check directory
+ jnc compare ;Go home if done
+how_many: cmp files,0 ;Was directory empty?
+ je all_done ;Yes, go home
+ convert files,10,message ;See end of chapter
+all_done: display message ;See Function 09H
+ select_disk "A" ;See Function 0EH
+
+
+
+4
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Move File Pointer (Function 42H)
+
+ Call:
+
+ AH = 42H
+ AL
+  Method of moving
+ BX
+  Handle
+ CX:DX
+  Distance in bytes (offset)
+
+ Return:
+
+ Carry set:
+ AX
+  1 = Invalid function
+  6 = Invalid handle
+ Carry not set:
+ DX:AX
+  New read/write pointer location
+
+
+Comments:
+
+Function 42H moves the read/write pointer of the file associated with the
+specified handle. BX must contain the handle. CX and DX must contain a
+32-bit offset (CX contains the most significant byte). AL must contain a
+code that specifies how to move the pointer:
+
+Code
+ Cursor Moved to
+_ ________________________________________________________________
+
+0 Beginning of file plus the offset
+
+1 Current pointer location plus the offset
+
+2 End of file plus the offset
+
+DX and AX return the new location of the read/write pointer (a 32-bit
+integer; DX contains the most significant byte). You can determine the
+length of a file by setting CX:DX to 0, AL to 2, and calling this function.
+DX:AX returns the offset of the byte following the last byte in the file (size
+of the file in bytes).
+
+If there is an error, the carry flag (CF) is set and the error code returns in
+AX:
+
+Code
+ Meaning
+_ ________________________________________________________________
+
+
+  5
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+1 AL not 0, 1, or 2
+
+6 Handle not open
+
+
+Macro Definition:
+
+
+move_ptr macro handle,high,low,method
+  mov bx,handle
+  mov cx,high
+  mov dx,low
+  mov al,method
+  mov ah,42H
+  int 21H
+  endm
+
+
+Example:
+
+The following program prompts for a letter, converts it to its alphabetic
+sequence (A=1, B=2, etc.), then reads and displays the corresponding
+record from the file named alphabet.dat that is in the current directory on
+the disk in drive B. The file contains 26 records, each 28 bytes long.
+
+file db "b:alphabet.dat",0
+buffer db 28 dup (?),"$"
+prompt db "Enter letter: $"
+crlf db 0DH,0AH,"$"
+handle db ?
+record_length dw 28
+;
+begin: open_handle file,0 ;See Function 3DH
+ jc error_open ;Routine not shown
+ mov handle,ax ;Save handle
+get_char: display prompt ;See Function 09H
+ read_kbd_and_echo ;See Function 01H
+ sub al,41h ;Convert to sequence
+ mul byte ptr record_length ;Calculate offset
+ move_ptr handle,0,ax,0 ;THIS FUNCTION
+ jc error_move ;Routine not shown
+ read_handle handle,buffer,record_length
+ jc error_read ;Routine not shown
+ cmp ax,0 ;End of file?
+ je return ;Yes, go home
+ display crlf ;See Function 09H
+ display buffer ;See Function 09H
+ display crlf ;See Function 09H
+ jmp get_char ;Get another character
+
+
+
+6
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Get/Set File Attributes (Function 43H)
+
+ Call:
+
+ AH = 43H
+ AL
+  0 = Get attributes
+  1 = Set attributes
+ CX (if AL=1)
+  Attributes to be set
+ DS:DX
+  Pointer to pathname
+
+ Return:
+
+ Carry set:
+ AX
+  1 = Invalid function
+  2 = File not found
+  3 = Path not found
+  5 = Access denied
+ Carry not set:
+ CX
+  Attribute byte (if AL=0)
+
+
+Comments:
+
+Function 43H gets or sets the attributes of a file. DX must contain the
+offset (from the segment address in DS) of an ASCIZ string that specifies the
+pathname of a file. AL must specify whether to get or set the attribute
+(0=get, 1=set).
+
+If AL is 0 (get the attribute), the attribute byte returns in CX. If AL is 1
+(set the attribute), CX must contain the attributes to be set. The attri-
+butes are described under "File Attributes" earlier in this chapter.
+
+You cannot change the VolumeID bit (08H) or the Subdirectory bit (10H)
+of the attribute byte with this function.
+
+
+
+  7
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+If there is an error, the carry flag (CF) is set and the error code returns in
+AX:
+
+Code
+ Meaning
+_ ________________________________________________________________
+
+1 AL not 0 or 1
+
+2 File doesn't exist
+
+3 Path invalid
+
+5 Attribute in CX cannot be changed (Subdirectory or VolumeID).
+
+
+Macro Definition:
+
+
+change_attr macro path,action,attrib
+  mov dx,offset path
+  mov al,action
+  mov cx,attrib
+  mov ah,43H
+  int 21H
+  endm
+
+
+Example:
+
+The following program displays the attributes assigned to the file named
+report.asm that is in the current directory on the disk in drive B.
+
+header db 15 dup (20h),"Read-",0DH,0AH
+ db "Filename Only Hidden "
+ db "System Volume Sub-Dir Archive"
+ db 0DH,0AH,0DH,0AH,"$"
+path db "b:report.asm",3 dup (0),"$"
+attribute dw ?
+blanks db 9 dup (20h),"$"
+;
+begin: change_attr path,0,0 ;THIS FUNCTION
+ jc error_mode ;Routine not shown
+ mov attribute,cx ;Save attribute byte
+ display header ;See Function 09H
+ display path ;See Function 09H
+ mov cx,6 ;Check 6 bits (0-5)
+ mov bx,1 ;Start with bit 0
+chk_bit: test attribute,bx ;Is the bit set?
+ jz no_attr ;No
+ display_char "X" ;See Function 02H
+ jmp short next_bit ;Done with this bit
+no_attr: display_char 20h ;See Function 02H
+next_bit: display blanks ;See Function 09H
+ shl bx,1 ;Move to next bit
+ loop chk_bit ;Check it
+
+
+8
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+IOCtl Data (Function 44H, Codes 0 and 1)
+
+ Call:
+
+ AH = 44H
+ AL
+  0 = Get device data
+  1 = Set device data
+ BX
+  Handle
+ DX
+  Device data (see text)
+
+ Return:
+
+ Carry set:
+ AX
+  1 = Invalid function
+  6 = Invalid handle
+ Carry not set:
+ DX
+  Device data
+
+
+Comments:
+
+Function 44H, Codes 0 and 1, either gets or sets the data MS-DOS uses to
+control the device. AL must contain 0 to get the data or 1 to set it. BX
+must contain the handle. If AL is 1, DH must contain 0.
+
+The device-data word is specified or returned in DX. If bit 7 of the data is
+1, the handle refers to a device and the other bits have the following mean-
+ings:
+
+
+  9
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+Table 0.1
+
+MS-DOS Data Bit Values
+
+_ _________________________________________________________________________
+
+Bit  Value  Meaning 
+
+_ _________________________________________________________________________
+
+0  1  Console input device 
+1  1  Console output device 
+2  1  Null device 
+3  1  Clock device 
+4  1  Reserved 
+5  1  Don't check for control characters 
+  0  Check for control characters 
+6  0  End of file on input 
+8-10    Reserved 
+11  1  Device understands open/close 
+12    Reserved 
+13  1  Device supports output until busy 
+14  1   
+
+ Device can process control strings sent with Function 44H, Codes
+ 2 and 3 (IOCtl character); bit can be read only, but not set
+15    Reserved 
+
+_ _________________________________________________________________________
+
+You must set the reserved bits to zero.
+
+The control characters referred to in the description of bit 5 are
+CONTROL-C, CONTROL-P, CONTROL-S, and CONTROL-Z. To read these charac-
+ters as data, instead of as control characters, you must set bit 5 and use
+either Function 33H, CONTROL-C Check, or the MS-DOS break command
+to turn off CONTROL-C checking.
+
+If bit 7 of DX is 0, the handle refers to a file and the other bits have the
+following meanings:
+
+Bit  Value  Meaning 
+
+_ ________________________________________________________________
+
+0-5     Drive number (0=A, 1=B, etc.) 
+6   0  The file has been written 
+8-15     Reserved 
+
+_ ________________________________________________________________
+
+
+
+10
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+If there is an error, the carry flag (CF) is set and the error code returns in
+AX:
+
+Code
+ Meaning
+_ ________________________________________________________________
+
+1 AL not 0 or 1, or AL is 1 but DH is not 0
+
+6 Handle in BX not open or is invalid
+
+
+Macro Definition:
+
+
+ioctl_data macro code,handle
+  mov bx,handle
+  mov al,code
+  mov ah,44H
+  int 21H
+  endm
+
+
+Example:
+
+The following program gets the device data for standard output, sets the
+bit that specifies not to check for control characters (bit 5), and then
+clears the bit.
+
+get equ 0
+set equ 1
+stdout equ 1
+;
+begin: ioctl_data get,stdout ;THIS FUNCTION
+ jc error ;routine not shown
+ mov dh,0 ;clear DH
+ or dl,20H ;set bit 5
+ ioctl_data set,stdout ;THIS FUNCTION
+ jc error ;routine not shown
+;
+; <control characters now treated as data, or "raw mode">
+;
+ ioctl_data get,stdout ;THIS FUNCTION
+ jc error ;routine not shown
+ mov dh,0 ;clear DH
+ and dl,0DFH ;clear bit 5
+ ioctl_data set,stdout ;THIS FUNCTION
+;
+; <control characters now interpreted, or "cooked mode">
+;
+
+
+
+  11
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+IOCtl Character (Function 44H, Codes 2 and 3)
+
+ Call:
+
+ AH = 44H
+ AL
+  2 = Send control data
+  3 = Receive control data
+ BX
+  Handle
+ CX
+  Bytes to read or write
+ DS:DX
+  Pointer to buffer
+
+ Return:
+
+ Carry set:
+ AX
+  1 = Invalid function
+  6 = Invalid handle
+ Carry not set:
+ AX
+  Bytes transferred
+
+
+Comments:
+
+Function 44H, Codes 2 and 3, sends or receives control data to or from a
+character device. AL must contain 2 to send data or 3 to receive. BX must
+contain the handle of a character device, such as a printer or serial port.
+CX must contain the number of bytes to be read or written. DX must con-
+tain the offset (to the segment address in DS) of the data buffer.
+
+AX returns the number of bytes transferred. The device driver must sup-
+port the IOCtl interface.
+
+If there is an error, the carry flag (CF) is set and the error code returns in
+AX:
+
+Code
+ Meaning
+_ ________________________________________________________________
+
+1 AL not 2 or 3, or device cannot perform the specified function
+
+6 Handle in BX not open or doesn't exist
+
+
+
+12
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Macro Definition:
+
+
+ioctl_char macro code,handle,buffer
+  mov bx,handle
+  mov dx,offset buffer
+  mov al,code
+  mov ah,44H
+  int 21H
+  endm
+
+
+Example:
+
+No general example is applicable, since processing of IOCtl control data
+depends on the device being used, as well as the device driver.
+
+
+  13
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+IOCtl Block (Function 44H, Codes 4 and 5)
+
+ Call:
+
+ AH = 44H
+ AL
+  4 = Send control data
+  5 = Receive control data
+ BL
+  Drive number (0=default, 1=A, etc.)
+ CX
+  Bytes to read or write
+ DS:DX
+  Pointer to buffer
+
+ Return:
+
+ Carry set:
+ AX
+  1 = Invalid function
+  5 = Invalid drive
+ Carry not set:
+ AX
+  Bytes transferred
+
+
+Comments:
+
+Function 44H, Codes 4 and 5, sends or receives control data to or from a
+block device. AL must contain 4 to send data or 5 to receive. BL must con-
+tain the drive number (0=default, 1=A, etc.). CX must contain the
+number of bytes to be read or written. DX must contain the offset (to the
+segment address in DS) of the data buffer.
+
+AX returns the number of bytes transferred. The device driver must sup-
+port the IOCtl interface. To determine whether it does, use Function 44H,
+Code 0, to get the device data, and test bit 14; if the bit is set, the driver
+supports IOCtl.
+
+
+
+14
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+If there is an error, the carry flag (CF) is set and the error code returns in
+AX:
+
+Code
+ Meaning
+_ ________________________________________________________________
+
+1 AL not 4 or 5, or device cannot perform the specified function
+
+5 Number in BL not a valid drive number
+
+
+Macro Definition:
+
+
+ioctl_status macro code,drive,buffer
+  mov bl,drive
+  mov dx,offset buffer
+  mov al,code
+  mov ah,44H
+  int 21H
+  endm
+
+
+Example:
+
+No general example is applicable, since processing of IOCtl control data
+depends on the device being used, as well as the device driver.
+
+
+  15
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+IOCtl Status (Function 44H, Codes 6 and 7)
+
+ Call:
+
+ AH = 44H
+ AL
+  6 = Check input status
+  7 = Check output status
+ BX
+  Handle
+
+ Return:
+
+ Carry set:
+ AX
+  1 = Invalid function
+  5 = Access denied
+  6 = Invalid handle
+  13 = Invalid data
+ Carry not set:
+ AL
+  00H = Not ready
+  0FFH= Ready
+
+
+Comments:
+
+Function 44H, Codes 6 and 7, checks whether the file or device associated
+with a handle is ready. AL must contain 6 to check whether the handle is
+ready for input or 7 to check whether the handle is ready for output. BX
+must contain the handle.
+
+AL returns the status:
+
+  Meaning for  Meaning for  Meaning for 
+Value  Device  Input File  Output File 
+
+_ ________________________________________________________________
+
+00H  Not ready  Pointer is at EOF  Ready 
+0FFH  Ready  Ready  Ready 
+
+_ ________________________________________________________________
+
+An output file always returns ready, even if the disk is full.
+
+If there is an error, the carry flag (CF) is set and the error code returns in
+AX:
+
+Code
+ Meaning
+_ ________________________________________________________________
+
+
+16
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+1 AL not 6 or 7
+
+5 Access denied
+
+6 Number in BX not a valid, open handle
+
+13 Invalid data
+
+
+Macro Definition:
+
+
+ioctl_status macro code,handle
+  mov bx,handle
+  mov al,code
+  mov ah,44H
+  int 21H
+  endm
+
+
+Example:
+
+The following program displays a message that tells whether the file asso-
+ciated with handle 6 is ready for input or whether it is at end-of-file.
+
+stdout equ 1
+;
+message db "File is "
+ready db "ready."
+at_eof db "at EOF."
+crlf db ODH,OAH
+;
+begin: write_handle stdout,message,8 ;display message
+ jc write_error ;routine not shown
+ ioctl_status 6 ;THIS FUNCTION
+ jc ioctl_error ;routine not shown
+ cmp al,0 ;check status code
+ jne not_eof ;file is ready
+ write_handle stdout,at_eof,7 ;see Function 40H
+ jc write_error ;routine not shown
+ jmp all_done ;clean up & go home
+not_eof: write_handle stdout,ready,6 ;see Function 40H
+all_done: write_handle stdout,crlf,2 ;see Function 40H
+ jc write_error ;routine not shown
+
+
+
+  17
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+IOCtl Is Changeable (Function 44H, Code 08H)
+
+ Call:
+
+ AH = 44H
+ AL = 08H
+ BL
+  Drive number (0=default, 1=A, etc.)
+
+ Return:
+
+ Carry set:
+ AX
+  1 = Invalid function
+  15 = Invalid drive
+ Carry not set:
+ AX
+  0 = Changeable
+  1 = Not changeable
+
+
+
+Comments:
+
+Function 44H, Code 08H, checks whether a drive contains a removable or
+nonremovable disk. BL must contain the drive number (0=default, 1=A,
+etc.). AX returns 0 if the disk can be changed, 1 if it cannot.
+
+This call lets a program determine whether to issue a message to change
+disks.
+
+If there is an error, the carry flag (CF) is set and the error code returns in
+AX.
+
+Code
+ Meaning
+_ ________________________________________________________________
+
+1 Device does not support this call
+
+15 Number in BL not a valid drive number
+
+When the call returns error 1 (because the driver doesn't support it), the
+caller asssumes that the driver cannot be changed.
+
+
+18
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Macro Definition:
+
+
+ioctl_change macro drive
+  mov bl, drive
+  mov al, 08H
+  mov ah, 44H
+  int 21H
+  endm
+
+
+Example:
+
+The following program checks whether the current drive contains a remov-
+able disk. If not, processing continues; if so, the program prompts the user
+to replace the disk in the current drive.
+
+stdout equ 1
+;
+message db "Please replace disk in drive "
+drives db "ABCD"
+crlf db 0DH,0AH
+;
+begin: ioctl_change 0 ;THIS FUNCTION
+ jc ioctl_error ;routine not shown
+ cmp ax,0 ;current drive changeable?
+ jne continue ;no, continue processing
+ write_handle stdout,message,29 ;see Function 40H
+ jc write_error ;routine not shown
+ current_disk ;see Function 19H
+ xor bx,bx ;clear index
+ mov bl,al ;get current drive
+ display_char drives[bx] ;see Function 02H
+ write_handle stdout,crlf,2 ;see Function 40H
+ jc write_error ;routine not shown
+continue:
+; (Further processing here)
+
+
+
+  19
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+IOCtl Is Redirected Block (Function 44H, Code
+09H)
+
+ Call:
+
+ AH = 44H
+ AL = 09H
+ BL
+  Drive number (0=default, 1=A, etc.)
+
+ Return:
+
+ Carry set:
+ AX
+  1 = Invalid function code
+  15 = Invalid drive number
+ Carry not set:
+ DX
+  Device-attribute bits
+
+
+
+Comments:
+
+Function 44H, Code 09H, checks whether a drive letter refers to a drive on
+a Microsoft Networks workstation (local) or is redirected to a server
+(remote). BL must contain the drive number (0=default, 1=A, etc.).
+
+If the block device is local, DX returns the attribute word from the device
+header. If the block device is remote, only bit 12 (1000H) is set; the other
+bits are 0 (reserved).
+
+An application program should not test bit 12, because applications
+should not make distinctions between local and remote files (or devices).
+Programs should be written so that they will be independent of the loca-
+tion of a device that has been removed.
+
+If there is an error, the carry flag (CF) is set and the error code returns in
+AX:
+
+Code
+ Meaning
+_ ________________________________________________________________
+
+1 File sharing must be loaded to use this system call
+
+15 Number in BL not a valid drive number
+
+
+
+20
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Macro Definition:
+
+
+ioctl_rblock macro drive
+  mov bl, drive
+  mov al, 09H
+  mov ah, 44H
+  int 21H
+  endm
+
+
+Example:
+
+The following program checks whether drive B is local or remote and
+displays the appropriate message.
+
+stdout equ 1
+;
+message db "Drive B: is "
+loc db "local."
+rem db "remote."
+crlf db 0DH,0AH
+;
+begin: write_handle stdout,message,12 ;display message
+ jc write_error ;routine not shown
+ ioctl_rblock 2 ;THIS FUNCTION
+ jc ioctl_error ;routine not shown
+ test dx,1000h ;bit 12 set?
+ jnz not_loc ;yes, it's remote
+ write_handle stdout,loc,6 ;see Function 40H
+ jc write_error ;routine not shown
+ jmp done
+not_loc: write_handle stdout,rem,7 ;see Function 40H
+ jc write_error ;routine not shown
+done: write_handle stdout,crlf,2 ;see Function 40H
+ jc write_error ;routine not shown
+
+
+
+  21
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+IOCtl Is Redirected Handle (Function 44H,
+Code 0AH)
+
+ Call:
+
+ AH = 44H
+ AL = 0AH
+ BX
+  Handle
+
+ Return:
+
+ Carry set:
+ AX
+  1 = Invalid function code
+  6 = Invalid handle
+ Carry not set:
+ DX
+  IOCtl bit field
+
+
+
+Comments:
+
+Function 44H, Code 0AH, checks whether a handle refers to a file or a dev-
+ice on a Microsoft Networks workstation (local) or is redirected to a server
+(remote). BX must contain the file handle. DX returns the IOCtl bit field;
+bit 15 is set if the handle refers to a remote file or device.
+
+An application program should not test bit 15, because applications
+should not make distinctions between local and remote files (or devices).
+Programs should be written so that they will be independent of the loca-
+tion of a device that has been removed.
+
+If there is an error, the carry flag (CF) is set and the error code returns in
+AX:
+
+Code
+ Meaning
+_ ________________________________________________________________
+
+1 Network must be loaded to use this system call
+
+6 Handle in BX not a valid, open handle
+
+
+
+22
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Macro Definition:
+
+
+ioctl_rhandle macro handle
+  mov bx, handle
+  mov al, 0AH
+  mov ah, 44H
+  int 21H
+  endm
+
+
+Example:
+
+The following program checks whether handle 5 refers to a local or remote
+file or a device and displays the appropriate message.
+
+stdout equ 1
+;
+message db "Handle 5 is "
+loc db "local."
+rem db "remote."
+crlf db 0DH,0AH
+;
+begin: write_handle stdout,message,12;display message
+ jc write_error ;routine not shown
+ ioctl_rhandle 5 ;THIS FUNCTION
+ jc ioctl_error ;routine not shown
+ test dx,8000h ;bit 15 set?
+ jnz not_loc ;yes, it's remote
+ write_handle stdout,loc,6 ;see Function 40H
+ jc write_error ;routine not shown
+ jmp done
+not_loc: write_handle stdout,rem,7 ;see Function 40H
+ jc write_error ;routine not shown
+done: write_handle stdout,crlf,2 ;see Function 40H
+ jc write_error ;routine not shown
+
+
+
+  23
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+IOCtl Retry (Function 44H, Code 0BH)
+
+ Call:
+
+ AH = 44H
+ AL = 0BH
+ DX
+  Number of retries
+ CX
+  Wait time
+
+ Return:
+
+ Carry set:
+ AX
+  1 = Invalid function code
+ Carry not set:
+  No error
+
+
+
+Comments:
+
+Function 44H, Code 0BH, specifies how many times MS-DOS should retry
+a disk operation that fails because of a file-sharing violation. DX must
+contain the number of retries. CX controls the pause between retries.
+
+MS-DOS retries this type of disk operation three times, unless you use this
+system call to specify a different number. After the specified number of
+retries, MS-DOS issues Interrupt 24H (Critical-Error-Handler Address) for
+the requesting process.
+
+The effect of the delay parameter in CX is machine-dependent because it
+specifies how many times MS-DOS should execute an empty loop. The
+actual time varies, depending on the processor and clock speed. You can
+determine the effect on your machine by using debug. Set the number of
+retries to 1 and then time several values of CX.
+
+
+
+24
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+If there is an error, the carry flag (CF) is set and the error code returns in
+AX:
+
+Code
+ Meaning
+_ ________________________________________________________________
+
+1 File sharing must be loaded to use this system call
+
+
+Macro Definition:
+
+
+ioctl_retry macro retries, wait
+  mov dx, retries
+  mov cx, wait
+  mov al, 0BH
+  mov ah, 44H
+  int 21H
+  endm
+
+
+Example:
+
+The following program sets the number of sharing retries to 10 and
+specifies a delay of 1000 between retries.
+
+begin: ioctl_retry 10,1000 ;THIS FUNCTION
+ jc error ;routine not shown
+
+
+
+  25
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Generic IOCtl (for Handles) (Function 44H,
+Code 0CH)
+
+ Call:
+
+ AH = 44H
+ AL = 0CH
+ BX
+  Handle
+ CH = 05H
+  Category code (printer device)
+ CL
+  Function (minor) code
+ DS:DX
+  Pointer to data buffer
+
+ Return:
+
+ Carry set:
+ AX
+  1 = Invalid function code
+ Carry not set:
+  No error
+
+
+Comments:
+
+This call loads and selects code pages for devices on a per-device basis. It
+also sets or gets the output iteration count for a printer that supports
+"PRINT 'TIL BUSY."
+
+The category code may be one of the following:
+
+Code
+ Meaning
+_ ________________________________________________________________
+
+00 Unknown device
+
+01 Serial printer
+
+03 Console device
+
+05 Parallel printer
+
+The function code may be one of the following:
+
+Code
+ Meaning
+_ ________________________________________________________________
+
+
+
+26
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+45H Sets iteration count for printer
+
+4AH Select code page
+
+4CH Start prepare list
+
+4DH End prepare list
+
+65H Gets iteration count for printer
+
+6AH Query code page selected
+
+6BH Query code page prepare list
+
+_ ________________________________________________________________
+
+Note
+
+ DS:DX points to a word that contains the new value for the total
+ number of output iterations performed before proceeding. Thus,
+ DS:DX points to a word that contains the character iteration count for
+ the "PRINT 'TIL BUSY" loop. This is the number of times the device
+ driver will wait for the device to signal "ready" before acknowledging
+ "Device busy."
+
+_ ________________________________________________________________
+
+
+Macro Definition:
+
+
+ioctl_handles macro handle,function,category,buffer
+  mov ch,05H
+  mov cl,function
+  mov dx,offset buffer
+  mov bx,handle
+  mov ah,44H
+  mov al,0CH
+  int 21H
+  endm
+
+
+
+  27
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Generic IOCtl (for Devices) (Function 44H,
+Code 0DH)
+
+ Call:
+
+ AH = 44H
+ AL = 0DH
+ BL
+  Drive number
+  (0 = default, 1 = A, etc.)
+ CH = 08H
+  Category (major) code
+ CL
+  Function (minor) code
+ DS:DX
+  Pointer to parameter block -1
+
+ Return:
+
+ Carry set:
+ AX
+  1 = Invalid function code
+  2 = Invalid drive
+ Carry not set:
+  No error
+
+
+Comments:
+
+The function code may be one of the following:
+
+Code
+ Meaning
+_ ________________________________________________________________
+
+40 Set device parameters
+
+41 Write track on logical device
+
+42 Format track on logical device
+
+60 Get device parameters
+
+61 Read track on logical device
+
+62 Verify track on logical device
+
+_ ________________________________________________________________
+
+Note
+
+ You must issue "Set Device Parameters" before you can read, write,
+ format, or verify a logical drive.
+
+28
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+_ ________________________________________________________________
+
+You should use the following procedure when you want to read, write, for-
+mat, or verify a logical drive:
+
+ o Save drive parameters using "Get Device Parameters;"
+
+ o Set desired drive parameters using "Set Device Parameters;"
+
+ o Perform the I/O operation;
+
+ o Restore the original drive parameters using "Set Device Parame-
+ ters."
+
+
+Set Device Parameters (Function 44 0DH, CL=40H)
+
+When CL=40H, the parameter block has the following field format:
+
+ --------------------------------------
+ | BYTE Special Functions |
+ |------------------------------------|
+ | BYTE Device Type |
+ |------------------------------------|
+ | WORD Device Attributes |
+ |------------------------------------|
+ | WORD Number of Cylinders |
+ |------------------------------------|
+ | BYTE Media Type |
+ |------------------------------------|
+ | Device BPB |
+ |------------------------------------|
+ | Track Layout |
+ --------------------------------------
+
+These fields have the following meanings:
+
+Special Functions
+
+Bit  Value  Meaning 
+
+_ ________________________________________________________________
+
+ 0   0   
+
+ The Device BPB (BIOS Parameter Block) field contains
+ the new default BPB for this device. If a previous "Set
+ Parameter Device" call set this bit, Build BPB returns
+ the actual media BPB; otherwise, it returns the default
+ BPB for the device.
+
+    1   
+
+ All subsequent Build BPB requests return the device
+ BPB.
+
+ 1   0  Read all fields of the parameter block. 
+
+
+
+  29
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+    1   
+
+ Ignore all fields of the parameter block except for the
+ Track Layout field.
+
+ 2   0   
+
+ The sectors in the track may not all be the same size.
+ (You should not use this setting.)
+
+    1   
+
+ The sectors in the track are all the same size and the
+ sector numbers range between 1 and the total number of
+ sectors actually in the track. You should always set this
+ bit.
+
+ 3-7   0  These bits must be zero. 
+
+_ ________________________________________________________________
+
+
+Device Type
+
+This byte describes the physical device and is set by the device. When set,
+it has the following meanings:
+
+Value
+ Meaning
+_ ________________________________________________________________
+
+0 320/360 KB
+
+1 1.2 MB
+
+2 720 KB
+
+3 8-inch, single-density
+
+4 8-inch, double-density
+
+5 Hard disk
+
+6 Tape drive
+
+7 Other
+
+
+Device Attributes
+
+Bit  Value  Meaning 
+
+_ ________________________________________________________________
+
+    0  The media is removable. 
+
+ 0   1  The media is not removable. 
+
+ 1   0   
+
+ Disk change-line is not
+ supported; (no door lock
+ support).
+
+    1   
+
+ Disk change-line is
+ supported; (door lock
+ support).
+
+ 2-7   0  These bits must be zero. 
+
+_ ________________________________________________________________
+
+
+30
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Number of Cylinders
+
+This field indicates the maximum number of cylinders that the physical
+device can support. This information is set by the device.
+
+Media Type
+
+For drives that may contain different media, this field (which is device-
+dependent) indicates which media the drive expects.
+
+For a 1.2 MB disk, bit zero has the following meaning:
+
+Bit  Value  Meaning 
+
+_ ________________________________________________________________
+
+ 0   0  Quad-density, 1.2 MB disk 
+
+    1  Double-density, 320/360 KB disk 
+
+_ ________________________________________________________________
+
+The default media type is a quad-density 1.2 MB disk.
+
+Device BPB
+
+If bit 0 of the Special Functions field is clear, the BPB in this field is the
+new default BPB for the device.
+
+If bit 0 of the Special Functions field is set, the device driver returns the
+BPB from this field for subsequent Build BPB requests.
+
+Track Layout
+
+This field contains a table of variable length for each logical device and
+indicates the expected layout of the sectors on the media track. The field
+has the following format:
+
+ ------------------------------------------------
+ | WORD Sector Count -- total # of sectors |
+ |----------------------------------------------|
+ | WORD Sector Number -- sector #1 |
+ |----------------------------------------------|
+ | WORD Sector Size -- sector #1 |
+ |----------------------------------------------|
+ | WORD Sector Number -- sector #2 |
+ |----------------------------------------------|
+ | WORD Sector Size -- sector #2 |
+ ------------------------------------------------
+ |
+ |
+ |
+
+  31
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+ ------------------------------------------------
+ | WORD Sector Number -- sector #n |
+ |----------------------------------------------|
+ | WORD Sector Size -- sector #n |
+ ------------------------------------------------
+
+The Sector Count field indicates the total number of sectors. Each sector
+number must be unique and in the range of 1 to sector count (n).
+
+If bit 2 of the Special Functions field is set, all sector sizes must be the
+same.
+
+Get Device Parameters (Function 440DH, CL=60H)
+
+When CL=60H, the parameter block has the same field layout as for
+CL=40H. However, some of the fields have different meanings. These are
+described as follows:
+
+Special Functions
+
+Bit  Value  Meaning 
+
+_ ________________________________________________________________
+
+ 0   0  Returns the default BPB for the device. 
+
+    1   
+
+ Returns the BPB that Build BPB
+ would return.
+
+ 1-7   0  These bits must be zero. 
+
+_ ________________________________________________________________
+
+
+Track Layout
+
+The "Get Device Parameters" call does not use this field.
+
+Read/Write Track on Logical Drive
+(Function 440D, CL=61H/CL=41H)
+
+To write to a track on a logical drive, set CL=41H. To read a track on a
+logical drive, set CL=61H.
+
+When CL=41H or 61H, the parameter block has the following format:
+
+ --------------------------------
+ | BYTE Special Functions |
+ |------------------------------|
+ | WORD Head |
+ |------------------------------|
+ | WORD Cylinder |
+ |------------------------------|
+
+32
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+ | WORD First Sector |
+ |------------------------------|
+ | WORD Number of Sectors |
+ |------------------------------|
+ | DWORD Transfer Address |
+ --------------------------------
+
+These fields are described as follows:
+
+Special Functions This byte must be zero.
+
+Head
+
+This field contains the number of the head on which you perform the write
+or read.
+
+Cylinder
+
+This field contains the number of the cylinder on which you perform the
+write or read.
+
+First Sector
+
+This field contains the number of the first sector on which you perform the
+write or read. Sectors are numbered starting with zero, so the fourth sec-
+tor is numbered 3.
+
+Number of Sectors
+
+This field contains the total number of sectors.
+
+Transfer Address
+
+This field contains the address for storing the data to be written or the
+data just read.
+
+Format/Verify Track on Logical Drive
+(Function 440DH, CL=42/CL=62)
+
+To format and verify a track on a logical drive, set CL=42H. To verify a
+track on a logical drive, set CL=62H.
+
+
+
+  33
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+When CL=42H or 62H, the parameter block has the following format:
+
+ --------------------------------
+ | BYTE Special Functions |
+ |------------------------------|
+ | WORD Head |
+ |------------------------------|
+ | WORD Cylinder |
+ --------------------------------
+
+These fields are described as follows:
+
+Special Functions
+
+This byte must be zero.
+
+Head
+
+This field contains the number of the head on which you perform the for-
+mat or verify.
+
+Cylinder
+
+This field contains the number of the cylinder on which you perform the
+format or verify.
+
+
+34
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Get/Set IOCtl Drive Map (Function 44H,
+Codes 0EH and 0FH)
+
+ Call:
+
+ AH = 44H
+ AL
+  OEH = Get logical drive map
+  OFH = Set logical drive map
+ BX
+  Drive number
+  (0 = default, 1 = A, etc.)
+
+ Return:
+
+ Carry set:
+ AX
+  1 = Invalid function code
+  5 = Invalid drive
+ Carry not set:
+ AL = Logical drive mapped onto physical drive
+  (= 0 if only one drive is
+  assigned to this physical drive)
+
+
+Comments:
+
+MS-DOS 3.3 supports the mapping of multiple logical drives onto a single
+physical block device. Get IOCtl Drive Map lets you query the DOS about
+which logical drive is currently mapped onto the corresponding physical
+device. Set IOCtl Drive Map alters the device that is currently mapped
+onto the physical device. These functions are only useful if there is more
+than one logical block device mapped onto a single physical device.
+
+A possible use for these functions is with applications that want to disable
+the DOS prompt in order to place the correct floppy disk in the drive when
+accessing the other logical drive.
+
+To detect whether a logical device currently owns the physical device it is
+mapped to, a program needs to check the value in AL after calling Func-
+tion 440EH or 440FH (Get/Set IOCtl Drive Map).
+
+
+  35
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Duplicate File Handle (Function 45H)
+
+ Call:
+
+ AH = 45H
+ BX
+  Handle
+
+ Return:
+
+ Carry set:
+ AX
+  4 = Too many open files
+  6 = Invalid handle
+ Carry not set:
+ AX
+  New handle
+
+
+
+Comments:
+
+Function 45H creates an additional handle for a file. BX must contain the
+handle of an open file.
+
+MS-DOS returns the new handle in AX. The new handle refers to the same
+file as the handle in BX, with the file pointer at the same position.
+
+After you use this function request, moving the read/write pointer of
+either handle also moves the pointer for the other handle. You usually use
+this function request to redirect standard input (handle 0) and standard
+output (handle 1). For a description of standard input, standard output,
+and the advantages and techniques of manipulating them, see Software
+Tools by Brian W. Kernighan and P.J. Plauger (Addison-Wesley Publish-
+ing Co., 1976).
+
+If there is an error, the carry flag (CF) is set and the error code returns in
+AX:
+
+Code
+ Meaning
+_ ________________________________________________________________
+
+4 Too many open files (no handle available)
+
+6 Handle not open or is invalid
+
+
+
+36
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Macro Definition:
+
+
+xdup macro handle
+ mov bx,handle
+ mov ah,45H
+ int 21H
+ endm
+
+
+Example:
+
+The following program redirects standard output (handle 1) to a file
+named dirfile, invokes a second copy of command.com to list the directory
+(which writes the directory to dirfile), and then restores standard input to
+handle 1.
+
+pgm_file db "command.com",0
+cmd_line db 9,"/c dir /w",0dH
+parm_blk db 14 dup (0)
+path db "dirfile",0
+dir_file dw ? ; For handle
+sav_stdout dw ? ; For handle
+;
+begin: set_block last_inst ; See Function 4AH
+ jc error_setblk ; Routine not shown
+ create_handle path,0 ; See Function 3CH
+ jc error_create ; Routine not shown
+ mov dir_file,ax ; Save handle
+ xdup 1 ; THIS FUNCTION
+ jc error_xdup ; Routine not shown
+ mov sav_stdout,ax ; Save handle
+ xdup2 dir_file,1 ; See Function 46H
+ jc error_xdup2 ; Routine not shown
+ exec pgm_file,cmd_line,parm_blk ; See Function
+ 4BH
+ jc error_exec ; Routine not shown
+ xdup2 sav_stdout,1 ; See Function 46H
+ jc error_xdup2 ; Routine not shown
+ close_handle sav_stdout ; See Function 3EH
+ jc error_close ; Routine not shown
+ close_handle dir_file ; See Function 3EH
+ jc error_close ; Routine not shown
+
+
+
+  37
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Force Duplicate File Handle (Function 46H)
+
+ Call:
+
+ AH = 46H
+ BX
+  Handle
+ CX
+  Second handle
+
+ Return:
+
+ Carry set:
+ AX
+  4 = Too many open files
+  6 = Invalid handle
+ Carry not set:
+  No error
+
+
+
+Comments:
+
+Function 46H forces a specified handle to refer to the same file as a second
+handle already associated with an open file. BX must contain the handle
+of the open file; CX must contain the second handle.
+
+On return, the handle in CX now refers to the same file at the same posi-
+tion as the handle in BX. If the file referred to by the handle in CX was
+open at the time of the call, this function closes it.
+
+After you use this call, moving the read/write pointer of either handle also
+moves the pointer for the other handle. Normally, you would use this
+function request to redirect standard input (handle 0) and standard out-
+put (handle 1). For a description of standard input, standard output, and
+the advantages and techniques of manipulating them, see Software Tools
+by Brian W. Kernighan and P.J. Plauger (Addison-Wesley Publishing Co.,
+1976).
+
+
+
+38
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+If there is an error, the carry flag (CF) is set and the error code returns in
+AX:
+
+Code
+ Meaning
+_ ________________________________________________________________
+
+4 Too many open files (no handle available)
+
+6 Handle not open or is invalid
+
+
+Macro Definition:
+
+
+xdup2 macro handle1,handle2
+ mov bx,handle1
+ mov cx,handle2
+ mov ah,46H
+ int 21H
+ endm
+
+
+Example:
+
+The following program redirects standard output (handle 1) to a file
+named dirfile, invokes a second copy of command.com to list the directory
+(which writes the directory to dirfile), and then restores standard input to
+handle 1.
+
+pgm_file db "command.com",0
+cmd_line db 9,"/c dir /w",0dH
+parm_blk db 14 dup (0)
+path db "dirfile",0
+dir_file dw ? ; For handle
+sav_stdout dw ? ; For handle
+;
+begin: set_block last_inst ; See Function 4AH
+ jc error_setblk ; Routine not shown
+ create_handle path,0 ; See Function 3CH
+ jc error_create ; Routine not shown
+ mov dir_file,ax ; Save handle
+ xdup 1 ; See Function 45H
+ jc error_xdup ; Routine not shown
+ mov sav_stdout,ax ; Save handle
+ xdup2 dir_file,1 ; 
+ jc error_xdup2 ; Routine not shown
+ exec pgm_file,cmd_line,parm_blk ; See Function
+ 4BH
+ jc error_exec ; Routine not shown
+ xdup2 sav_stdout,1 ; THIS FUNCTION
+ jc error_xdup2 ; Routine not shown
+ close_handle sav_stdout ; See Function 3EH
+ jc error_close ; Routine not shown
+ close_handle dir_file ; See Function 3EH
+ jc error_close ; Routine not shown
+
+  39
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Get Current Directory (Function 47H)
+
+ Call:
+
+ AH = 47H
+ DS:SI
+  Pointer to 64-byte memory area
+ DL
+  Drive number
+  (0 = default, 1 = A)
+
+ Return:
+
+ Carry set:
+ AX
+  15 = Invalid drive number
+ Carry not set:
+  No error
+
+
+
+Comments:
+
+Function 47H returns the pathname of the current directory on a specified
+drive. DL must contain a drive number (0=default, 1=A, etc.). SI must
+contain the offset (from the segment address in DS) of a 64-byte memory
+area.
+
+MS-DOS places an ASCIZ string in the memory area, consisting of the path
+(starting from the root directory) of the current directory for the drive
+specified in DL. The string does not begin with a backslash and does not
+include the drive letter.
+
+If there is an error, the carry flag (CF) is set and the error code returns in
+AX:
+
+Code
+ Meaning
+_ ________________________________________________________________
+
+15 Number in DL not a valid drive number
+
+
+
+40
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Macro Definition:
+
+
+get_dir macro drive,buffer
+  mov dl,drive
+  mov si,offset buffer
+  mov ah,47H
+  int 21H
+  endm
+
+
+Example:
+
+The following program displays the current directory that is on the disk in
+drive B.
+
+disk db "b:
+buffer db 64 dup (?)
+;
+begin: get_dir 2,buffer ;THIS FUNCTION
+ jc error_dir ;Routine not shown
+ display disk ;See Function 09H
+ display_asciz buffer ;See end of chapter
+
+
+
+  41
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Allocate Memory (Function 48H)
+
+ Call:
+
+ AH = 48H
+ BX
+  Paragraphs of memory requested
+
+ Return:
+
+ Carry set:
+ AX
+  7 = Memory-control blocks damaged
+  8 = Insufficient memory
+ BX
+  Paragraphs of memory available
+ Carry not set:
+ AX
+  Segment address of allocated memory
+
+
+
+Comments:
+
+Function 48H tries to allocate the specified amount of memory to the
+current process. BX must contain the number of paragraphs of memory
+(one paragraph is 16 bytes).
+
+If sufficient memory is available to satisfy the request, AX returns the seg-
+ment address of the allocated memory (the offset is 0). If sufficient memory
+is not available, BX returns the number of paragraphs of memory in the
+largest available block.
+
+If there is an error, the carry flag (CF) is set and the error code returns in
+AX:
+
+Code
+ Meaning
+_ ________________________________________________________________
+
+7 Memory-control blocks damaged (a user program changed memory
+ that doesn't belong to it)
+
+8 Not enough free memory to satisfy the request
+
+
+
+42
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Macro Definition:
+
+
+allocate_memory macro bytes
+   mov bx,bytes
+   mov cl,4
+   shr bx,cl
+   inc bx
+   mov ah,48H
+   int 21H
+   endm
+
+
+Example:
+
+The following program opens the file named textfile.asc, calculates its size
+with Function 42H (Move File Pointer), allocates a block of memory the
+size of the file, reads the file into the allocated memory block, and then
+frees the allocated memory.
+
+path db "textfile.asc",0
+msg1 db "File loaded into allocated memory block.",
+ 0DH,0AH
+msg2 db "Allocated memory now being freed
+ (deallocated).",0DH,0AH
+handle dw ?
+mem_seg dw ?
+file_len dw ?
+;
+begin: open_handle path,0
+ jc error_open ;Routine not shown
+ mov handle,ax ;Save handle
+ move_ptr handle,0,0,2 ;See Function 42H
+ jc error_move ;Routine not shown
+ mov file_len,ax ;Save file length
+ set_block last_inst ;See Function 4AH
+ jc error_setblk ;Routine not shown
+ allocate_memory file_len ;THIS FUNCTION
+ jc error_alloc ;Routine not shown
+ mov mem_seg,ax ;Save address of new memory
+ move_ptr handle,0,0,0 ;See Function 42H
+ jc error_move ;Routine not shown
+ push ds ;Save DS
+ mov ax,mem_seg ;Get segment of new memory
+ mov ds,ax ;Point DS at new memory
+ read_handle cs:handle,0,cs:file_len ;Read file into
+; new memory
+ pop ds ;Restore DS
+ jc error_read ;Routine not shown
+; (CODE TO PROCESS FILE GOES HERE)
+ write_handle stdout,msg1,42 ;See Function 40H
+ jc write_error ;Routine not shown
+ free_memory mem_seg ;See Function 49H
+ jc error_freemem ;Routine not shown
+ write_handle stdout,msg2,49 ;See Function 40H
+
+  43
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+ jc write_error ;Routine not shown
+
+
+
+44
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Free Allocated Memory (Function 49H)
+
+ Call:
+
+ AH = 49H
+ ES
+  Segment address of memory to be
+  freed
+
+ Return:
+
+ Carry set:
+ AX
+  7 = Memory-control blocks damaged
+  9 = Incorrect segment
+ Carry not set:
+  No error
+
+
+
+Comments:
+
+Function 49H frees (makes available) a block of memory previously allo-
+cated with Function 48H (Allocate Memory). ES must contain the segment
+address of the memory block to be freed.
+
+If there is an error, the carry flag (CF) is set and the error code returns in
+AX:
+
+Code
+ Meaning
+_ ________________________________________________________________
+
+7 Memory-control blocks damaged (a user program changed memory
+ that didn't belong to it)
+
+9 Memory pointed to by ES was not allocated with Function 48H
+
+
+Macro Definition:
+
+
+free_memory macro seg_addr
+  mov ax,seg_addr
+  mov es,ax
+  mov ah,49H
+  int 21H
+  endm
+
+
+
+  45
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Example:
+
+The following program opens a file named textfile.asc, calculates its size
+with Function 42H (Move File Pointer), allocates a block of memory the
+size of the file, reads the file into the allocated memory block, and then
+frees the allocated memory.
+
+path db "textfile.asc",0
+msg1 db "File loaded into allocated memory block.",
+ 0DH,0AH
+msg2 db "Allocated memory now being freed
+ (deallocated).",0DH,0AH
+handle dw ?
+mem_seg dw ?
+file_len dw ?
+;
+begin: open_handle path,0
+ jc error_open ;Routine not shown
+ mov handle,ax ;Save handle
+ move_ptr handle,0,0,2 ;See Function 42H
+ jc error_move ;Routine not shown
+ mov file_len,ax ;Save file length
+ set_block last_inst ;See Function 4AH
+ jc error_setblk ;Routine not shown
+ allocate_memory file_len ;See Function 48H
+ jc error_alloc ;Routine not shown
+ mov mem_seg,ax ;Save address of new memory
+ mov_ptr handle,0,0,0 ;See Function 42H
+ jc error_move ;Routine not shown
+ push ds ;Save DS
+ mov ax,mem_seg ;Get segment of new memory
+ mov ds,ax ;Point DS at new memory
+ read_handle handle,code,file_len ;Read file into
+; new memory
+ pop ds ;Restore DS
+ jc error_read ;Routine not shown
+; (CODE TO PROCESS FILE GOES HERE)
+ write_handle stdout,msg1,42 ;See Function 40H
+ jc write_error ;Routine not shown
+ free_memory mem_seg ;THIS FUNCTION
+ jc error_freemem ;Routine not shown
+ write_handle stdout,msg2,49 ;See Function 40H
+ jc write_error ;Routine not shown
+
+
+
+46
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Set Block (Function 4AH)
+
+ Call:
+
+ AH = 4AH
+ BX
+  Paragraphs of memory
+ ES
+  Segment address of memory area
+
+ Return:
+
+ Carry set:
+ AX
+  7 = Memory-control blocks damaged
+  8 = Insufficient memory
+  9 = Incorrect segment
+ BX
+  Paragraphs of memory available
+ Carry not set:
+  No error
+
+
+Comments:
+
+Function 4AH changes the size of a memory-allocation block. ES must
+contain the segment address of the memory block. BX must contain the
+new size of the memory block, in paragraphs (one paragraph is 16 bytes).
+
+MS-DOS attempts to change the size of the memory block. If the call fails
+on a request to increase memory, BX returns the maximum size (in para-
+graphs) to which the block can be increased.
+
+Since MS-DOS allocates all available memory to a .com program, you
+would use this call most often to reduce the size of a program's initial
+memory-allocation block.
+
+
+
+  47
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+If there is an error, the carry flag (CF) is set and the error code returns in
+AX:
+
+Code
+ Meaning
+_ ________________________________________________________________
+
+7 Memory-control blocks destroyed (a user program changed memory
+ that didn't belong to it)
+
+8 Not enough free memory to satisfy the request
+
+9 Wrong address in ES (the memory block it points to cannot be
+ modified with Set Block)
+
+The following macro shrinks the initial memory-allocation block of a .com
+program. It takes as a parameter the offset of the first byte following the
+last instruction of a program (LAST_INST in the sample programs), uses
+it to calculate the number of paragraphs in the program, and then adds 17
+to the result: one to round up and 16 to set aside 256 bytes for a stack. It
+then sets up SP and BP to point to this stack.
+
+Macro Definition:
+
+
+set_block macro last_byte
+  mov bx,offset last_byte
+  mov cl,4
+  shr bx,cl
+  add bx,17
+  mov ah,4AH
+  int 21H
+  mov ax,bx
+  shl ax,cl
+  dec ax
+  mov sp,ax
+  mov bp,sp
+  endm
+
+
+Example:
+
+The following program invokes a second copy of command.com and exe-
+cutes a dir (directory) command.
+
+pgm_file db "command.com",0
+cmd_line db 9,"/c dir /w",0DH
+parm_blk db 14 dup (?)
+reg_save db 10 dup (?)
+;
+begin: set_block last_inst ;THIS FUNCTION
+ exec pgm_file,cmd_line,parm_blk,0 ;See Function
+ ;4BH
+
+
+
+48
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Load and Execute Program (Function 4BH,
+Code 00H)
+
+ Call:
+
+ AH = 4BH
+ AL = 00H
+ DS:DX
+  Pointer to pathname
+ ES:BX
+  Pointer to parameter block
+
+ Return:
+
+ Carry set:
+ AX
+  1 = Invalid function
+  2 = File not found
+  3 = Path not found
+  4 = Too many open files
+  5 = Access denied
+  8 = Insufficient memory
+  10 = Bad environment
+  11 = Bad format
+ Carry not set:
+  No error
+
+
+Comments:
+
+Function 4BH, Code 00H, loads and executes a program. DX must contain
+the offset (from the segment address in DS) of an ASCIZ string that specifies
+the drive and pathname of an executable program file. BX must contain
+the offset (from the segment address in ES) of a parameter block. AL must
+contain 0.
+
+There must be enough free memory for MS-DOS to load the program file.
+MS-DOS allocates all available memory to a program when it loads it, so
+you must free some memory with Function 4AH (Set Block) before using
+this function request to load and execute another program. Unless you or
+MS-DOS needs the memory for some other purpose, you should shrink the
+memory to the minimum amount required by the current process before
+issuing this request.
+
+MS-DOS creates a Program Segment Prefix for the program being loaded
+and sets the terminate and CONTROL-C addresses to the instruction that
+immediately follows the call to Function 4BH in the invoking program.
+
+
+  49
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+The parameter block consists of four addresses:
+
+Table 0.2
+
+Contents of the Parameter Block
+
+_ _________________________________________________________________________
+
+Offset  Length   
+(Hex)  (Bytes)  Description 
+
+_ _________________________________________________________________________
+
+00  2 (word)   
+
+ Segment address of the environment to be passed; 00H
+ means copy the parent program's environment.
+
+02  4 (dword)   
+
+ Segment: Offset of command line to be placed at offset 80H
+ of the new Program Segment Prefix. Must be a correctly-
+ formed command line no longer than 128 bytes.
+
+06  4 (dword)   
+
+ Segment: Offset of FCB to be placed at offset 5CH of the
+ new Program Segment Prefix (the Program Segment Prefix
+ is described in Chapter 4, "MS-DOS Control Blocks and
+ Work Areas")
+
+0A  4 (dword)   
+
+ Segment: Offset of FCB to be placed at offset 6CH of the
+ new Program Segment Prefix
+
+_ _________________________________________________________________________
+
+All open files of a program are available to the newly loaded program, giv-
+ing the parent program control over the definition of standard input, out-
+put, auxiliary, and printer devices. For example, a program could write a
+series of records to a file, open the file as standard input, open a second file
+as standard output, and then use Function 4BH, Code 00H (Load and Exe-
+cute Program) to load and execute a program that takes its input from
+standard input, sorts records, and writes to standard output.
+
+The loaded program also receives an environment, a series of ASCIZ strings
+of the form parameter=value (for example, verify= on). The environment
+must begin on a paragraph boundary, be less than 32K bytes long, and
+end with a byte of 00H (that is, the final entry consists of an ASCIZ string
+followed by two bytes of 00H). Following the last byte of zeros is a set of
+initial arguments passed to a program containing a word count followed
+by an ASCIZ string. If the call finds the file in the current directory, the
+ASCIZ string contains the drive and pathname of the executable program as
+passed to Function 4BH. If the call finds the file in the path, it concaten-
+ates the filename with the path information. (A program may use this area
+to determine whence it was loaded.) If the word-environment address is 0,
+the loaded program either inherits a copy of the parent program's environ-
+ment or receives a new environment built for it by the parent.
+
+Place the segment address of the environment at offset 2CH of the new
+Program Segment Prefix. To build an environment for the loaded pro-
+gram, put it on a paragraph boundary and place the segment address of
+the environment in the first word of the parameter block. To pass a copy
+of the parent's environment to the loaded program, put 00H in the first
+
+50
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+word of the parameter block.
+
+If there is an error, the carry flag (CF) is set and the error code returns in
+AX:
+
+Code
+ Meaning
+_ ________________________________________________________________
+
+1 AL not 0 or 3
+
+2 Program file not found
+
+3 Path invalid or not found
+
+4 Too many open files (no handle available)
+
+5 Directory full, a directory with the same name exists, or a file with
+ the same name exists
+
+8 Not enough memory to load the program
+
+10 Environment appears longer than 32K
+
+11 Program file is an .exe file that contains internally inconsistent
+ information
+
+
+Executing Another Copy of Command.com
+
+Since command.com builds pathnames, searches command paths for pro-
+gram files, and relocates .exe files, the simplest way to load and execute
+another program is to load and execute an additional copy of
+command.com, passing it a command line that includes the /c switch,
+which invokes the .com or .exe file.
+
+This action requires 17K bytes of available memory, so a program that
+does it should be sure to shrink its initial memory-allocation block with
+Function 4AH (Set Block). The format of a command line that contains
+the /c switch:
+
+length,/c command,0DH
+
+Length is the length of the command line, counting the length byte but not
+the ending carriage-return (0DH).
+
+Command is any valid MS-DOS command.
+
+0DH is a carriage-return character.
+
+If a program executes another program directly\(emnaming it as the program
+file to Function 4BH instead of command.com\(emit must perform all the
+processing normally done by command.com.
+
+
+  51
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Macro Definition:
+
+
+exec macro path,command,parms
+ mov dx,offset path
+ mov bx,offset parms
+ mov word ptr parms[02H],offset command
+ mov word ptr parms[04H],cs
+ mov word ptr parms[06H],5CH
+ mov word ptr parms[08H],es
+ mov word ptr parms[0AH],6CH
+ mov word ptr parms[0CH],es
+ mov al,0
+ mov ah,4BH
+ int 21H
+ endm
+
+
+Example:
+
+The following program invokes a second copy of command.com and exe-
+cutes a dir (directory) command by using the /w (wide) switch:
+
+pgm_file db "command.com",0
+cmd_line db 9,"/c dir /w",0DH
+parm_blk db 14 dup (?)
+reg_save db 10 dup (?)
+;
+begin:
+ set_block last_inst ;See Function 4AH
+ exec pgm_file,cmd_line,parm_blk,0 ;THIS FUNCTION
+
+
+
+52
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Load Overlay (Function 4BH, Code 03H)
+
+ Call:
+
+ AH = 4BH
+ AL = 03H
+ DS:DX
+  Pointer to pathname
+ ES:BX
+  Pointer to parameter block
+
+ Return:
+
+ Carry set:
+ AX
+  1 = Invalid function
+  2 = File not found
+  3 = Path not found
+  4 = Too many open files
+  5 = Access denied
+  8 = Insufficient memory
+  10 = Bad environment
+ Carry not set:
+  No error
+
+
+Comments:
+
+Function 4BH, Code 03H, loads a program segment (overlay). DX must
+contain the offset (from the segment address in DS) of an ASCIZ string that
+specifies the drive and pathname of the program file. BX must contain the
+offset (from the segment address in ES) of a parameter block. AL must
+contain 3.
+
+MS-DOS assumes that since the invoking program is loading into its own
+address space, it requires no free memory. This call does not create a Pro-
+gram Segment Prefix.
+
+
+
+  53
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+The parameter block is four bytes long:
+
+
+Table 0.3
+
+Contents of the Parameter Block
+
+_ _________________________________________________________________________
+
+Offset  Length   
+(Hex)  (Bytes)  Description 
+
+_ _________________________________________________________________________
+
+00  2 (word)  Segment address where program is to be loaded 
+
+02  2 (word)   
+
+ Relocation factor; usually the same as the first word of the
+ parameter block (for a description of an .exe file and of
+ relocation, see Chapter 6, ".Exe File Structure and
+ Loading.")
+
+_ _________________________________________________________________________
+
+If there is an error, the carry flag (CF) is set and the error code returns in
+AX:
+
+Code
+ Meaning
+_ ________________________________________________________________
+
+1 AL not 00H or 03H
+
+2 Program file not found
+
+3 Path invalid or not found
+
+4 Too many open files (no handle available)
+
+5 Directory is full, a directory with the same name exists, or a file
+ with the same name exists
+
+8 Not enough memory to load the program
+
+10 Environment appears longer than 32K
+
+
+Macro Definition:
+
+
+exec_ovl macro path,parms,seg_addr
+  mov dx,offset path
+  mov bx,offset parms
+  mov parms,seg_addr
+  mov parms[02H],seg_addr
+  mov al,3
+  mov ah,4BH
+  int 21H
+  endm
+
+
+
+54
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Example:
+
+The following program opens a file named textfile.asc, redirects standard
+input to that file, loads more.com as an overlay, and calls an overlay
+named bit.com, which reads textfile.asc as standard input. The overlay
+must establish its own addressability and end with a FAR return.
+
+stdin equ 0
+;
+file db "TEXTFILE.ASC",0
+cmd_file db "\bit.com",0
+parm_blk dw 4 dup (?)
+overlay label dword
+ dw 0
+handle dw ?
+new_mem dw ?
+;
+begin: set_block last_inst ;see Function 4AH
+ jc setblock_error ;routine not shown
+ allocate_memory 2000 ;see Function 48H
+ jc allocate_error ;routine not shown
+ mov new_mem,ax ;save seg of memory
+ open_handle file,0 ;see Function 3DH
+ jc open_error ;routine not shown
+ mov handle,ax ;save handle
+ xdup2 handle,stdin ;see Function 45H
+ jc dup2_error ;routine not shown
+ close_handle handle ;see Function 3EH
+ jc close_error ;routine not shown
+ mov ax,new_mem ;addr of new memory
+ exec_ovl cmd_file,parm_blk,ax ;THIS FUNCTION
+ jc exec_error ;routine not shown
+ call overlay ;call the overlay
+ free_memory new_mem ;see Function 49H
+ jc free_error ;routine not shown
+;
+
+
+
+  55
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+End Process (Function 4CH)
+
+ Call:
+
+ AH = 4CH
+ AL
+  Return code
+
+ Return:
+
+ None
+
+
+
+Comments:
+
+Function 4CH terminates a process and returns to MS-DOS. AL contains a
+return code that can be retrieved by the parent process with Function 4DH
+(Get Return Code of Child Process) or the if command, using errorlevel.
+
+MS-DOS closes all open handles, ends the current process, and returns
+control to the invoking process.
+
+This function request doesn't require CS to contain the segment address of
+the Program Segment Prefix. You should use it to end a program (rather
+than Interrupt 20H or a jump to location 0) unless your program must be
+compatible with MS-DOS versions before 2.0.
+
+_ ________________________________________________________________
+
+Note
+
+ If you use file sharing, you must remove all locks issued by this process
+ or the DOS will be in an uncertain state.
+
+_ ________________________________________________________________
+
+
+
+56
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Macro Definition:
+
+
+end_process macro return_code
+  mov al,return_code
+  mov ah,4CH
+  int 21H
+  endm
+
+
+Example:
+
+The following program displays a message and returns to MS-DOS with a
+return code of 8. It uses only the opening portion of the sample program
+skeleton shown at the beginning of this chapter.
+
+message db "Displayed by FUNC_4CH example",0DH,0AH,"$"
+;
+begin: display message ;See Function 09H
+ end_process 8 ;THIS FUNCTION
+code ends
+ end code
+
+
+
+  57
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Get Return Code of Child Process (Function
+4DH)
+
+ Call:
+
+ AH = 4DH
+
+ Return:
+
+ AX
+  Return code
+
+
+
+Comments:
+
+Function 4DH retrieves the return code specified when a child process ter-
+minates via either Function 31H (Keep Process) or Function 4CH (End
+Process). The code returns in AL. AH returns a code that specifies why the
+program ended:
+
+Code
+ Meaning
+_ ________________________________________________________________
+
+0 Normal termination
+
+1 Terminated by CONTROL-C
+
+2 Critical device error
+
+3 Function 31H (Keep Process)
+
+This call can retrieve the exit code only once.
+
+Macro Definition:
+
+
+ret_code macro
+  mov ah,4DH
+  int 21H
+  endm
+
+58
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Example:
+
+No example is included for this function request, because the meaning of a
+return code varies.
+
+
+  59
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Find First File (Function 4EH)
+
+ Call:
+
+ AH = 4EH
+ DS:DX
+  Pointer to pathname
+ CX
+  Attributes to match
+
+ Return:
+
+ Carry set:
+ AX
+  2 = File not found
+  3 = Path not found
+  18 = No more files
+ Carry not set:
+  No error
+
+
+
+Comments:
+
+Function 4EH searches the current or specified directory for the first entry
+that matches the specified pathname. DX must contain the offset (from the
+segment address in DS) of an ASCIZ string that specifies the pathname,
+which can contain wildcard characters. CX must contain the attribute to
+be used in searching for the file, as described in Section 1.5.5, "File Attri-
+butes," earlier in this chapter.
+
+If the attribute field is hidden file, system file, or subdirectory entry (02H,
+04H, or 10H), or any combination of these values, all normal file entries
+are also searched. To search all directory entries except the volume label,
+set the attribute byte to 16H (hidden file, system file, and directory entry).
+
+
+
+60
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+If this function finds a directory entry that matches the name and attri-
+bute, it fills the current DTA as follows:
+
+
+Table 0.4
+
+
+
+_ _________________________________________________________________________
+
+Offset  Length  Description 
+
+_ _________________________________________________________________________
+
+00H  21  Reserved for subsequent Function 4FH (Find Next File)  
+
+15H  1  Attribute found 
+
+16H  2  Time file was last written 
+
+18H  2  Date file was last written 
+
+1AH  2  Low word of file size 
+
+1CH  2  High word of file size 
+
+1EH  13   
+
+ Name and extension of the file, followed by 00H. All blanks
+ are removed; if there is an extension, it is preceded by a
+ period. (Volume labels include a period after the eighth
+ character.)
+
+_ _________________________________________________________________________
+
+If there is an error, the carry flag (CF) is set and the error code returns in
+AX:
+
+Code
+ Meaning
+_ ________________________________________________________________
+
+2 Specified file invalid or doesn't exist
+
+3 Specified path invalid or doesn't exist
+
+18 No matching directory entry found
+
+
+Macro Definition:
+
+
+find_first_file macro path,attrib
+   mov dx,offset path
+   mov cx,attrib
+   mov ah,4EH
+   int 21H
+   endm
+
+
+
+  61
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Example:
+
+The following program displays a message that specifies whether a file
+named report.asm exists in the current directory on the disk in drive B.
+
+yes db "File exists.",0DH,0AH,"$"
+no db "File does not exist.",0DH,0AH,"$"
+path db "b:report.asm",0
+buffer db 43 dup (?)
+;
+begin: set_dta buffer ;See Function 1AH
+ find_first_file path,0 ;THIS FUNCTION
+ jc error_findfirst ;Routine not shown
+ cmp al,12H ;File found?
+ je not_there ;No
+ display yes ;See Function 09H
+ jmp return ;All done
+not_there: display no ;See Function 09H
+
+
+
+62
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Find Next File (Function 4FH)
+
+ Call:
+
+ AH = 4FH
+
+ Return:
+
+ Carry set:
+ AX
+  18 = No more files
+ Carry not set:
+  No error
+
+
+
+Comments:
+
+Function 4FH searches for the next directory entry that matches the name
+and attributes specified in a previous Function 4EH (Find First File). The
+current DTA must contain the information filled in by Function 4EH (Find
+First File).
+
+If the function finds a matching entry, it fills the current DTA just as it
+did for Find First File (see Function 4EH (Find First File)).
+
+If there is an error, the carry flag (CF) is set and the error code returns in
+AX:
+
+Code
+ Meaning
+_ ________________________________________________________________
+
+2 Specified path invalid or doesn't exist
+
+18 No matching directory entry found
+
+
+
+  63
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Macro Definition:
+
+
+find_next_file macro
+  mov ah,4FH
+  int 21H
+  endm
+
+
+Example:
+
+The following program displays the number of files contained in the
+current directory on the disk in drive B.
+
+message db "No files",0DH,0AH,"$"
+files dw ?
+path db "b:*.*",0
+buffer db 43 dup (?)
+;
+begin: set_dta buffer ;See Function 1AH
+ find_first_file path,0 ;See Function 4EH
+ jc error_findfirst ;Routine not shown
+ cmp al,12H ;Directory empty?
+ je all_done ;Yes, go home
+ inc files ;No, bump file counter
+search_dir: find_next_file ;THIS FUNCTION
+ jc error_findnext ;Routine not shown
+ cmp al,12H ;Any more entries?
+ je done ;No, go home
+ inc files ;Yes, bump file counter
+ jmp search_dir ;And check again
+done: convert files,10,message ;See end of chapter
+all_done: display message ;See Function 09H
+
+
+
+64
+
+_ _  |  |  _ _
+
+
+

@@ -1,0 +1,440 @@
+
+_ _  |  |  _ _
+
+  Programming Hints
+
+ _ ______________________________
+
+
+8.1 Introduction
+
+This chapter describes recommended MS-DOS 3.3 programming pro-
+cedures. By using these programming hints, you can ensure compatibility
+with future versions of MS-DOS.
+
+The hints are organized in the following categories:
+
+ o Interrupts
+
+ o System Calls
+
+ o Device Management
+
+ o Memory Management
+
+ o Process Management
+
+ o File and Directory Management
+
+ o Miscellaneous
+
+
+8.2 Interrupts
+
+ o Never explicitly issue Interrupt 22H (Terminate Process Exit
+ Address).
+
+ Only the DOS should do this. To change the terminate address,
+ use Function 35H (Get Interrupt Vector) to get the current address
+ and save it, then use Function 25H (Set Interrupt Vector) to
+ change the Interrupt 22H entry in the vector table to point to the
+ new terminate address.
+
+ o Use Interrupt 24H (Critical-Error-Handler Address) with care. The
+ Interrupt 24H handler must preserve the ES register.
+
+ An Interrupt 24H handler can issue only the system calls 01H-0CH.
+ Making any other calls destroys the MS-DOS stack and prevents
+ successful use of the Retry or Ignore options.
+
+ When using the Retry or Ignore options, you must preserve the SS,
+ SP, DS, BX, CX, and DX registers.
+
+ o When an Interrupt 24H (Critical-Error-Handler Address) is
+ received, always IRET back to MS-DOS with one of the standard
+ responses.
+
+ Programs that do not IRET from Interrupt 24H leave the system in
+ an unpredictable state until a function call other than 01H-0CH is
+ made. The Ignore option may leave incorrect or invalid data in
+
+  3
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+ internal system buffers.
+
+ o Avoid trapping Interrupt 23H (CONTROL-C Handler Address) and
+ Interrupt 24H (Critical-Error-Handler Address). Don't rely on trap-
+ ping errors via Interrupt 24H as part of a copy protection scheme.
+
+ These methods might not be included in future releases of
+ MS-DOS.
+
+ o A user program must never issue Interrupt 23H (CONTROL-C
+ Handler Address).
+
+ Only MS-DOS may issue Interrupt 23H.
+
+ o Save any registers that your program uses before issuing Interrupt
+ 25H (Absolute Disk Read) or Interrupt 26H (Absolute Disk Write).
+
+ These interrupts destroy all registers except for the segment regis-
+ ters.
+
+ Avoid writing or reading an interrupt vector directly to or from
+ memory.
+
+ o Use Functions 25H and 35H (Set Interrupt Vector and Get Inter-
+ rupt Vector) to set and get values in the interrupt table.
+
+
+8.3 System Calls
+
+ o Use new system calls.
+
+ Avoid using system calls that have been superseded by new calls
+ unless the program must maintain backward compatibility with
+ MS-DOS versions before 2.0. See Section 1.9, "Old System Calls",
+ for a list of these new calls.
+
+ o Avoid using functions 01H-0CH and 26H (Create New PSP).
+
+ Use the new "tools" approach for reading and writing on standard
+ input and output. Use Function 4BH (Load and Execute Program)
+ instead of 26H to execute a child process.
+
+ o Use file-sharing calls if more than one process is in effect.
+
+ For more information, see File Sharing, in Section 1.5.2, "File-
+ Related Function Requests."
+
+ o Use networking calls where appropriate.
+
+ Some forms of IOCtl can only be used with Microsoft Networks.
+ For more information, and a list of these calls, see Section 1.6,
+ "Microsoft Networks,"
+
+4
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+  Programming Hints
+
+ _ ______________________________
+
+ o When selecting a disk with Function 0EH (Select Disk), treat the
+ value returned in AL with care.
+
+ The value in AL specifies the maximum number of logical drives; it
+ does not specify which drives are valid.
+
+
+8.4 Device Management
+
+ o Use installable device drivers.
+
+ MS-DOS provides a modular device driver structure for the BIOS,
+ allowing you to configure and install device drivers at boot time.
+ Block device drivers transmit a block of data at a time, while char-
+ acter device drivers transmit a byte of data at a time.
+
+ Examples of both types of device drivers are given in Chapter 2, "-
+ MS-DOS Device Drivers."
+
+ o Use buffered I/O.
+
+ The device drivers can handle streams of data up to 64K bytes. To
+ improve performance when sending a large amount of output to
+ the screen, you can send it with one system call.
+
+ o Programs that use direct console I/O via Function 06H and 07H
+ (Direct Console I/O and Direct Console Input) and that want to
+ read CONTROL-C as data should ensure that CONTROL-C checking is
+ off.
+
+ The program should ensure that CONTROL-C checking is off by using
+ Function 33H (CONTROL-C Check).
+
+ o Be compatible with international support.
+
+ To provide support for international character sets, MS-DOS
+ recognizes all possible byte values as significant characters in
+ filenames and data streams. MS-DOS versions before 2.0 ignored
+ the high bit in the MS-DOS filename.
+
+
+8.5 Memory Management
+
+ o Use memory management.
+
+ MS-DOS keeps track of allocated memory by writing a memory
+ control block at the beginning of each area of memory. Programs
+ should use Functions 48H (Allocate Memory), 49H (Free Allocated
+ Memory), and 4AH (Set Block) to release unneeded memory.
+
+  5
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+ This allows for future compatibility. For more information, see
+ Section 1.3, "Memory Management."
+
+ o Use only allocated memory.
+
+ Don't directly access memory that was not provided as a result of a
+ system call. Do not use fixed addressing, use only relative refer-
+ ences.
+
+ A program that uses memory that has not been allocated to it may
+ destroy other memory control blocks or cause other applications to
+ fail.
+
+
+8.6 Process Management
+
+ o Use Function 4BH (Load and Execute Program, or EXEC) to load
+ and execute programs.
+
+ EXEC is the preferred call to use when loading programs and pro-
+ gram overlays. Using the EXEC call instead of hard-coding infor-
+ mation about how to load an .exe file (or always assuming that
+ your file is a .com file) isolates your program from changes in .exe
+ file formats and future releases of MS-DOS.
+
+ o Use Function 31H (Keep Process), instead of Interrupt 27H (Ter-
+ minate But Stay Resident).
+
+ Function 31H allows programs that are greater than 64K bytes to
+ terminate and stay resident.
+
+ o Programs should terminate using Function 4CH (End Process).
+
+ Programs that terminate by one of the following must ensure that
+ the CS register contains the segment address of the PSP:
+
+ o A long jump to offset 0 in the PSP
+
+ o Issuing an Interrupt 20H with CS:0 pointing at the PSP
+
+ o Issuing an Interrupt 21H with AH=0, CS:0 pointing at the PSP
+
+ o A long call to location 50H in the PSP with AH=0
+
+
+
+6
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+  Programming Hints
+
+ _ ______________________________
+
+
+8.7 File and Directory Management
+
+ o Use the MS-DOS file management system.
+
+ Using the MS-DOS file system ensures program compatibility with
+ future MS-DOS versions through compatible disk formats and con-
+ sistent internal storage.
+
+ o Use file handles instead of FCBs.
+
+ A handle is a 16-bit number that MS-DOS returns when a file is
+ opened or created using Functions 3CH, 3DH, 5AH, or 5BH (Create
+ Handle, Open Handle, Create Temporary File, or Create New File).
+ The MS-DOS file-related function requests that use handles are
+ listed in Table 1.5 in Chapter 1, "System Calls."
+
+ Although the default maximum number of open files is 20, this
+ limit can be raised to 64K by Function 67H (Set Handle Count).
+ For more information on this system call, see Chapter 1, "System
+ Calls."
+
+ You should use these calls instead of the old file-related functions
+ that use FCBs (file control blocks). This is because a file operation
+ can simply pass its handle rather than maintaining FCB informa-
+ tion. If you must use FCBs, be sure the program closes them and
+ does not move them around in memory.
+
+ o Close files that have changed in length before issuing an Interrupt
+ 20H (Program Terminate), Function 00H (Terminate Program),
+ Function 4CH (End Process), or Function 0DH (Reset Disk).
+
+ If you do not close a changed file, its length will not be recorded
+ correctly in the directory.
+
+ o Close files when they are no longer needed.
+
+ Closing unneeded files increases efficiency in a networking environ-
+ ment.
+
+ o If a program does use FCBs, that program should not close an FCB
+ file and then continue writing to it. This practice will not work in
+ a network environment, and is not recommended under any cir-
+ cumstances.
+
+ o Change disks only if all files on the disk are closed.
+
+ If you don't close all the files, any information in internal system
+ buffers may be written incorrectly to a changed disk.
+
+
+
+  7
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+8.7.1 Locking Files
+
+ o Programs should not rely on being denied access to a locked region.
+
+ To determine the status of a region, first, attempt to lock it, then
+ examine its error code.
+
+ o Programs should not close a file with a locked region or terminate
+ with an open file that contains a locked region.
+
+ The result of this procedure is undefined. Programs that might be
+ terminated by an Interrupt 23H or Interrupt 24H (CONTROL-C
+ Handler Address or Critical-Error-Handler Address) should trap
+ these interrupts and unlock any locked regions before exiting.
+
+
+8.8 Miscellaneous
+
+ o Avoid timing dependencies.
+
+ Various machines use CPUs of different speeds. Also, programs
+ that rely upon the speed of the clock for timing are not dependable
+ in a networking environment.
+
+ o Use the documented interface to the operating system. If either
+ the hardware or media change, the operating system can use the
+ features without modification.
+
+ Don't use the ROM support provided by the OEM (Original Equip-
+ ment Manufacturer).
+
+ Don't directly address the video memory.
+
+ Don't use undocumented function calls, interrupts, or features.
+
+ These items may change or may not exist in future MS-DOS ver-
+ sions. If you do use these features, you will make your program
+ highly non-portable.
+
+ o Use the .exe format rather than the .com format.
+
+ .Exe files are relocatable; .com files are direct memory images that
+ load at a specific place and have no room for additional control
+ information. .Exe files have headers that can be expanded for com-
+ patibility with future MS-DOS versions.
+
+ o Use the environment to pass information to applications.
+
+ The environment allows a parent process to pass information to a
+ child process. The command.com file is usually the parent process
+ to every application, so it can easily pass default drive and path
+ information to the application.
+
+8
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+  Programming Hints
+
+ _ ______________________________
+
+
+Chapter 8
+
+Programming Hints
+
+_ ________________________________________________________________
+
+8.1 Introduction 3
+
+8.2 Interrupts 3
+
+8.3 System Calls 4
+
+8.4 Device Management 5
+
+8.5 Memory Management 5
+
+8.6 Process Management 6
+
+8.7 File and Directory Management 7
+
+8.7.1 Locking Files 8
+
+8.8 Miscellaneous 8
+
+
+
+  9
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+  9
+
+_ _  |  |  _ _
+
+
+

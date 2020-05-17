@@ -1,0 +1,3 @@
+SYS messages+
+..\..\libc\PRINTF
+SYS.EXE /m;

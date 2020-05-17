@@ -1,0 +1,107 @@
+#***	Makefile for BIOS
+
+DEST	=io
+MSG	=messages
+DOS	=..\dos
+
+#	Definitions for Assembler
+
+ASM	=masm
+AFLAGS	=-Mx -t
+AINC	=-I. -I..\inc -I$(DOS)
+
+#	Definitions for C compiler
+
+CC	=cl
+CFLAGS	=-Ox -X -Zlp
+CINC	=-I. -I..\h
+
+#	Definitions for Linker
+
+LINK	=link
+
+#	Built-in rules
+
+.asm.obj:
+	$(ASM) $(AFLAGS) $(AINC) $*.asm,$*.obj;
+
+.asm.lst:
+	$(ASM) -l $(AFLAGS) $(AINC) $*.asm;
+
+.c.obj:
+	$(CC) -c $(CFLAGS) $(CINC) -Fo$*.obj $*.c
+
+.c.lst:
+	$(CC) -c $(CFLAGS) $(CINC) -Fc$*.cod -Fo$*.obj $*.c
+
+.exe.com:
+	reloc $*.exe $*.com
+
+#	Dependencies
+
+msload.obj: msload.asm msload.inc
+
+msload.com: msload.obj
+	LINK msload.obj,msload,,;
+	exe2bin msload.exe msload.com
+	del msload.exe
+
+msbio1.obj: msbio1.asm msdata.inc msgroup.inc jumpmac.inc pushpop.inc \
+   $(DOS)\devsym.inc dskprm.inc msmacro.inc
+
+
+mscon.obj: mscon.asm msgroup.inc jumpmac.inc msmacro.inc
+
+msaux.obj: msaux.asm msgroup.inc jumpmac.inc msmacro.inc
+
+mslpt.obj: mslpt.asm msgroup.inc msequ.inc msbds.inc msmacro.inc \
+   $(dos)\devsym.inc $(dos)\ioctl.inc $(dos)\bpb.inc
+
+msclock.obj: msclock.asm msgroup.inc  msmacro.inc
+
+msdisk.obj: msdisk.asm msgroup.inc msequ.inc msbds.inc pushpop.inc \
+   msmacro.inc $(dos)\devsym.inc dskprm.inc msioctl.inc \
+   $(dos)\ioctl.inc $(dos)\bpb.inc
+
+msinit.obj: msinit.asm msgroup.inc dskprm.inc msequ.inc msbds.inc \
+   msmacro.inc readclock.inc clocksub.inc msextrn.inc
+
+sysinit1.obj: sysinit1.asm msstack.inc stkmes.inc stkinit.inc \
+   $(dos)\devsym.inc $(dos)\ioctl.inc $(dos)\smdossym.inc \
+   $(dos)\dosmac.inc $(dos)\bpb.inc $(dos)\buffer.inc \
+    $(dos)\sysvar.inc $(dos)\vector.inc $(dos)\dirent.inc \
+    $(dos)\dpb.inc $(dos)\curdir.inc $(dos)\pdb.inc $(dos)\exe.inc \
+    $(dos)\sf.inc $(dos)\arena.inc $(dos)\intnat.inc $(dos)\mi.inc \
+    $(dos)\syscall.inc
+	masm401 $(AFLAGS) $(AINC) sysinit1;
+
+sysconf.obj: sysconf.asm $(dos)\devsym.inc $(dos)\ioctl.inc \
+    $(dos)\smdossym.inc $(dos)\dosmac.inc $(dos)\bpb.inc $(dos)\buffer.inc \
+    $(dos)\sysvar.inc $(dos)\vector.inc $(dos)\dirent.inc \
+    $(dos)\dpb.inc $(dos)\curdir.inc $(dos)\pdb.inc $(dos)\exe.inc \
+    $(dos)\sf.inc $(dos)\arena.inc $(dos)\intnat.inc $(dos)\mi.inc \
+    $(dos)\syscall.inc
+
+sysinit2.obj: sysinit2.asm $(dos)\devsym.inc $(dos)\ioctl.inc \
+    $(dos)\smdossym.inc $(dos)\dosmac.inc $(dos)\bpb.inc $(dos)\buffer.inc \
+    $(dos)\sysvar.inc $(dos)\vector.inc $(dos)\dirent.inc \
+    $(dos)\dpb.inc $(dos)\curdir.inc \
+    $(dos)\pdb.inc $(dos)\exe.inc $(dos)\sf.inc $(dos)\arena.inc \
+    $(dos)\intnat.inc $(dos)\mi.inc $(dos)\syscall.inc
+
+sysimes.obj: sysimes.asm msmacro.inc sysimes.inc msequ.inc msbds.inc
+
+msbio2.obj: msbio2.asm msgroup.inc msequ.inc msbds.inc $(dos)\devsym.inc \
+   pushpop.inc msmacro.inc biomes.inc ms96tpi.inc msvolid.inc
+
+mshard.obj: mshard.asm
+
+msbio.bin: msbio1.obj mscon.obj  msaux.obj mslpt.obj msclock.obj \
+   msdisk.obj msbio2.obj msinit.obj mshard.obj sysinit1.obj \
+   sysconf.obj sysinit2.obj sysimes.obj
+	link @msbio.lnk
+	exe2bin msbio.exe msbio.bin < locscr
+	copy /b msload.com+msbio.bin io.sys
+	del msbio.bin
+	del msbio.exe
+	del msload.com

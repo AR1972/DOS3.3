@@ -1,0 +1,52 @@
+#**     makefile for SYS
+
+DEST	=sys
+MSG	=messages
+
+#	Path definitions
+
+BIOS	=..\..\BIOS
+BOOT	=..\..\BOOT
+DOS	=..\..\DOS
+LIBC	=..\..\libc
+
+#       Definitions for assembler
+
+ASM	=masm
+AFLAGS	=-Mx -t
+AINC	=-I..\..\inc -I$(DOS)
+
+#       Definitions for C compiler
+
+CC	=cl
+CFLAGS	=-Ox -Zlp
+CINC	=-I..\..\h
+
+#	Definitions for linker
+
+LINK	=link
+LIBC	=..\..\libc
+
+
+# Rules and Dependencies follow
+
+
+SYS.OBJ: SYS.ASM $(DOS)\DOSSYM.INC $(DOS)\DOSMAC.INC \
+    $(DOS)\BPB.INC $(DOS)\BUFFER.INC $(DOS)\SYSVAR.INC \
+    $(DOS)\MULT.INC $(DOS)\DIRENT.INC $(DOS)\DPB.INC \
+    $(DOS)\CURDIR.INC $(DOS)\CPMFCB.INC $(DOS)\FIND.INC \
+    $(DOS)\PDB.INC $(DOS)\SF.INC $(DOS)\ARENA.INC $(DOS)\INTNAT.INC \
+    $(DOS)\ERROR.INC $(DOS)\SYSCALL.INC $(DOS)\IOCTL.INC \
+    $(BOOT)\BOOT.INC
+	masm $(AFLAGS) $(AINC) SYS;
+
+$(MSG).OBJ: $(MSG).ASM $(MSG).inc
+	masm $(AFLAGS) $(AINC) $(MSG);
+	
+$(LIBC)\printf.obj: $(LIBC)\printf.asm
+	masm $(AFLAGS) $(AINC) $(LIBC)\printf,$(LIBC)\printf;
+
+SYS.EXE: SYS.OBJ $(MSG).OBJ
+	link @sys.lnk
+	convert sys.exe
+	del sys.exe

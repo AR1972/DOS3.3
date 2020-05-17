@@ -1,0 +1,2555 @@
+
+_ _  |  |  _ _
+
+  Microsoft Relocatable Object Module Formats
+
+ _ __________________________________________________
+
+
+7.1 Introduction
+
+This chapter presents the object record formats that define the relocatable
+object language for the 8086, 80186, and 80286 microprocessors. The 8086
+object language is the output of all language translators that have an 8086
+processor and that will be linked by the Microsoft linker. The 8086 object
+language is used for input and output for object language processors such
+as linkers and librarians, and is used in the XENIX, PC-DOS, and MS-DOS
+operating systems.
+
+The 8086 object module formats let you specify relocatable memory
+images that may be linked together. These formats also allow efficient use
+of the memory mapping facilities of the 8086 family of microprocessors.
+
+The following table lists the record formats (each described in this
+chapter) that Microsoft supports (the abbreviations appear in
+parentheses):
+
+Table 7.1
+
+Object Module Record Formats
+
+_ _________________________________________________________________________
+
+Symbol Definition Records 
+
+Public Names Definition Record  (PUBDEF) 
+Communal Names Definition Record  (COMDEF) 
+Local Symbols Record  (LOCSYM) 
+External Names Definition Record  (EXTDEF) 
+Line Numbers Record  (LINNUM) 
+
+Data Records   
+
+Logical Enumerated Data Record  (LEDATA) 
+Logical Iterated Data Record  (LIDATA) 
+
+T-Module Header Record  (THEADR) 
+L-Module Header Record  (LHEADR) 
+List of Names Record  (LNAMES) 
+Segment Definition Record  (SEGDEF) 
+Group Definition Record  (GRPDEF) 
+
+Fixup Record  (FIXUPP) 
+Module End Record  (MODEND) 
+Comment Record  (COMENT) 
+
+_ _________________________________________________________________________
+
+
+
+  3
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+_ ________________________________________________________________
+
+Note
+
+ If an object module contains any undefined values, the behavior of the
+ Microsoft linker is undefined. All undefined values should be con-
+ sidered reserved by Microsoft for future use.
+
+_ ________________________________________________________________
+
+
+7.1.1 Definition of Terms
+
+The following terms are fundamental to 8086 relocation and linkage:
+
+OMF - Object Module Formats
+
+
+MAS - Memory Address Space
+
+The 8086 MAS is one megabyte (1,048,576 bytes). Note that the MAS is
+distinguished from actual memory, which may occupy only a portion of
+the MAS.
+
+Module
+
+A module is an "inseparable" collection of object code and other informa-
+tion produced by a translator.
+
+T-Module
+
+A T-module is a module created by a translator, such as Pascal or FOR-
+TRAN.
+
+The following restrictions apply to object modules:
+
+ o Every module should have a name. Translators provide default
+ names (possibly filenames or null names) for T-modules if neither
+ the source code nor the user specifies otherwise.
+
+ o Every T-module in a collection of linked modules should have a
+ different name so that symbolic debugging systems can distinguish
+ the various line numbers and local symbols. The Microsoft linker
+ does not require or enforce this restriction.
+
+
+
+4
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+  Microsoft Relocatable Object Module Formats
+
+ _ __________________________________________________
+
+
+Frame
+
+A frame is a contiguous region of 64K of memory address space (MAS),
+beginning on a paragraph boundary (i.e., on a multiple of 16 bytes) or on a
+selector on the 80286 processor. This concept is useful because the con-
+tents of the four 8086 segment registers define four (possibly overlapping)
+frames; no 16-bit address in the 8086 code can access a memory location
+outside the current four frames.
+
+LSEG (Logical Segment)
+
+A logical segment (LSEG) is a contiguous region of memory whose contents
+are determined at translation time (except for address-binding). Neither
+the size nor the location in MAS are necessarily determined during transla-
+tion: the size, although partially fixed, may not be final because the linker
+may combine the LSEG when linking with other LSEGs, forming a single
+LSEG. So that it can fit in a frame, an LSEG must not be larger than
+64K. Thus, a 16-bit offset, from the base of a frame that covers the LSEG,
+may address any byte in that LSEG.
+
+PSEG (Physical Segment)
+
+This term is equivalent to frame. Some prefer "PSEG" to "frame" because
+the terms PSEG and LSEG reflect the "physical" and "logical" nature of
+the underlying segments.
+
+Frame Number
+
+Every frame begins on a paragraph boundary. The "paragraphs" in MAS
+can be numbered from 0 through 65,535. These numbers, each of which
+defines a frame, are called frame numbers.
+
+Group
+
+A group is a collection of LSEGs defined at translation time, whose final
+locations in MAS have been constrained so that at least one frame exists
+that covers (contains) every LSEG in the collection.
+
+The notation "Gr A(X,Y,Z,)" means that LSEGs X, Y, and Z form a group
+named A. That X, Y, and Z are all LSEGs in the same group does not
+imply any ordering of X, Y, and Z in MAS, nor does it imply any contiguity
+between X, Y, and Z.
+
+
+
+  5
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+The Microsoft linker does not currently allow an LSEG to be a member of
+more than one group.
+
+Canonic
+
+On the 8086 processor, any location in MAS is contained in exactly 4096
+distinct frames, but one of these frames can be distinguished because it
+has a higher frame number. This frame is called the canonic frame of the
+location. In other words, the canonic frame of a given byte is the frame
+chosen so that the byte's offset from that frame lies in the range 0 to 15
+(decimal).
+
+For example, suppose FOO is a symbol defining a memory location. You
+would then refer to this frame as the "canonic frame of FOO." Similarly, if
+S is any set of memory locations, then a unique frame exists that has the
+lowest frame number in the set of canonic frames of the locations in S.
+This unique frame is called the canonic frame of the set S. You might
+refer similarly to the canonic frame of an LSEG or of a group of LSEGs.
+
+Segment Name
+
+LSEGs are assigned Segment Names at translation time. These names
+serve two purposes:
+
+ o During linking they play a role in determining which LSEGs are
+ combined with other LSEGs.
+
+ o They are used in assembly source code to specify membership in
+ groups.
+
+
+Class Name
+
+The translator may optionally assign class names to LSEGs during transla-
+tion. Classes define a partition on LSEGs: two LSEGs are in the same
+class if they have the same class name.
+
+The Microsoft linker applies the following semantics to class names: the
+class name "CODE", or any class name whose suffix is "CODE", implies
+that all segments of that class contain only code and may be considered
+read-only. Such segments may be overlaid if you specify the module con-
+taining the segment as part of an overlay.
+
+
+6
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+  Microsoft Relocatable Object Module Formats
+
+ _ __________________________________________________
+
+
+Overlay Name
+
+The linker may optionally assign an overlay name to LSEGs. The overlay
+name of an LSEG is ignored by Microsoft language linkers for version 3.00
+and later languages, but the standard MS-DOS linker supports it.
+
+Complete Name
+
+The complete name of an LSEG consists of the segment name, class name,
+and overlay name. The linker combines LSEGs from different modules if
+their complete names are identical.
+
+7.2 Module Identification and Attributes
+
+A module header record, which provides a module name, is always the first
+record in a module. In addition to having a name, a module may represent
+a main program and may have a specified starting address. When linking
+multiple modules together, you should give only one module with the main
+attribute. If more than one main module appears, the first takes
+precedence.
+
+In summary, modules may or may not be main and may or may not have a
+starting address.
+
+7.2.1 Segment Definition
+
+A module is a collection of object code defined by a sequence of records
+that a translator produces. The object code represents contiguous regions
+of memory whose contents the linker determines during translation.
+These regions are LSEGs. A module defines the attributes of each LSEG.
+The segment definition record (SEGDEF) is responsible for maintaining all
+LSEG information (name, length, memory alignment, etc.). The linker
+requires the LSEG information when you combine multiple LSEGs and
+when it establishes segment addressability. The SEGDEF records must
+follow the first header record.
+
+7.2.2 Addressing a Segment
+
+The 8086 addressing mechanism provides segment base registers from
+which you may address a 64K-byte region of memory (a Frame). There is
+one code segment base register (CS), two data segment base registers (DS,
+ES), and one stack segment base register (SS).
+
+
+
+  7
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+The possible number of LSEGs that may make up a memory image far
+exceeds the number of available base registers. Thus, base registers may
+require frequent loading. This would be the case in a modular program
+with many small data and/or code LSEGs.
+
+Since such frequent loading of base registers is undesirable, it is a good
+strategy to collect many small LSEGs together into a single unit that will
+fit in one memory frame. Then all the LSEGs may be addressed using the
+same base register value. This addressable unit is a group and has been
+defined earlier in Section 7.1.1, "Definition of Terms."
+
+To establish addressability of objects within a group, you must explicitly
+define each group in the module. The group definition record (GRPDEF)
+lists constituent segments by their segment names.
+
+The GRPDEF records within a module must follow all SEGDEF records
+because GRPDEF records will reference SEGDEF records in defining a
+Group. The GRPDEF records must also precede all other records except
+header records, which the linker must process first.
+
+7.2.3 Symbol Definition
+
+The Microsoft linker supports three different types of records belonging to
+the class of symbol definition records. The types are public names
+definition records (PUBDEFs), communal names definition records (COM-
+DEFs), and external names definition records (EXTDEFs). You use these
+record types to define globally visible procedures and data items and to
+resolve external references.
+
+7.2.4 Indices
+
+"Index" fields appear throughout this chapter. An index is an integer that
+selects a particular item from a collection of items; for example: name
+index, segment index, group index, external index, type index, etc.
+
+_ ________________________________________________________________
+
+Note
+
+ An index is normally a positive number. The index value zero is
+ reserved, and may carry a special meaning depending on the type of
+ index (for example, a segment index of zero specifies the "Unnamed"
+ absolute pseudo-segment; a type index of zero specifies the "Untyped
+ type.")
+
+_ ________________________________________________________________
+
+In general, indices must assume values that are quite large (that is, much
+
+8
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+  Microsoft Relocatable Object Module Formats
+
+ _ __________________________________________________
+
+larger than 255). Nevertheless, a great number of object files contain no
+indices with values greater than 50 or 100. Therefore, indices are encoded
+in one or two bytes, as required.
+
+The high-order (left-most) bit of the first (and possibly the only) byte
+determines whether the index occupies one byte or two. If the bit is 0, the
+index is a number between 0 and 127, occupying one byte. If the bit is 1,
+the index is a number between 0 and 32K-1, occupying two bytes, and is
+determined as follows: the low-order eight bits are in the second byte, and
+the high-order seven bits are in the first byte.
+
+7.3 Conceptual Framework for Fixups
+
+A fixup is a modification to object code that achieves address binding that
+a translator requested and a linker performed.
+
+_ ________________________________________________________________
+
+Note
+
+ This is the linker's definition of fixup. Nevertheless, the linker can
+ modify object code (make a "fixup") that does not conform to this
+ definition. For example, binding code to either hardware or software
+ floating-point subroutines is a modification to an operation code,
+ which is treated as an address. The previous definition of fixup is not
+ intended to disallow or discourage modifications to the object code.
+
+_ ________________________________________________________________
+
+8086-family translators need four kinds of data to specify a fixup:
+
+ o The place and type of a Location to be fixed up.
+
+ o One of two possible fixup modes.
+
+ o A target, which is the memory address that Location must refer to.
+
+ o A frame that defines a context in which the reference takes place.
+
+Location \(em There are five types of Locations: a pointer, a base, an offset, a
+hibyte, and a lobyte.
+
+The vertical alignment of the following figure illustrates four points
+(remember that the high-order byte of a word in 8086 memory is the byte
+with the higher address):
+
+ o A base is the high-order word of a pointer (the linker doesn't care
+ whether the low-order word of the pointer is present).
+
+
+  9
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+ o An offset is the low-order word of a pointer (the linker doesn't care
+ whether the high-order word follows).
+
+ o A hibyte is the high-order half of an offset (the linker doesn't care
+ whether the low-order half precedes).
+
+ o A lobyte is the low-order half of an offset (the linker doesn't care
+ whether the high-order half follows).
+
+
+ +----+----+----+----+
+Pointer: | |
+ +----+----+----+----+
+
+ +----+----+
+Base: | |
+ +----+----+
+
+ +----+----+
+Offset: | |
+ +----+----+
+
+ +----+
+Hibyte: | |
+ +----+
+
+ +----+
+Lobyte: | |
+ +----+
+
+
+ Figure 7.1 Location Types
+
+A Location is specified by two kinds of data: the Location type, and where
+the Location is (the location of the Location?).
+
+The Location type is specified by the LOC field in the FIXUPP record's
+LOCAT field; where the Location is is specified by the Data Record Offset
+field in the same LOCAT field.
+
+Mode \(em The Microsoft linker supports two kinds of fixups: self-relative
+and segment-relative.
+
+Self-relative fixups support the 8-bit and 16-bit offsets used in CALL,
+JUMP, and SHORT-JUMP instructions. Segment-relative fixups support
+all other addressing modes of the 8086.
+
+Target \(em The target is the location in MAS that the linker references.
+(More explicitly, the linker considers the target the lowest byte in the
+object that it is referencing.) The linker specifies a target by one of six
+methods. There are three "primary" methods and three "secondary" ones.
+Each primary method of specifying a target uses two kinds of data: an
+index number X, and a displacement D.
+
+
+10
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+  Microsoft Relocatable Object Module Formats
+
+ _ __________________________________________________
+
+_ ________________________________________________________________
+
+(T0) X is a segment index. The target is the Dth byte in the LSEG that
+ the segment index identifies.
+
+(T1) X is a group index. The target is the Dth byte in the LSEG that
+ the group index identifies.
+
+(T2) X is an external index. The external index identifies the external
+ name that (eventually) gives the address of a byte. The Dth byte
+ following this byte is the target.
+
+Each secondary method of specifying a target uses only one item of data
+\(em the index number X; this assumes an implicit displacement equal to
+zero.
+
+_ ________________________________________________________________
+
+(T4) X is a segment index. The target is the 0th (first) byte in the
+ LSEG that the segment index identifies.
+
+(T5) X is a group index. The target is the 0th (first) byte in the LSEG
+ in the specified group located (eventually) lowest in MAS.
+
+(T6) X is an external index. The target is the byte whose address is the
+ external name that the external index identifies.
+
+The following nomenclature describes a target:
+
+_ ________________________________________________________________
+
+Target: SI(segment name), displacement [T0]
+
+Target: GI(group name), displacement [T1]
+
+Target: EI(symbol name), displacement [T2]
+
+Target: SI (segment name) [T4]
+
+Target: GI (group name) [T5]
+
+Target: EI (symbol name) [T6]
+
+The following examples illustrate how this notation is used:
+
+_ ________________________________________________________________
+
+Target: SI(CODE), 1024 The 1025th byte in the segment
+ CODE.
+
+Target: GI(DATAAREA) The location in MAS of a group
+ called DATAAREA.
+
+Target: EI(SIN) The address of the external subrou-
+ tine SIN.
+
+Target: EI(PAYSCHEDULE), 24 The 24th byte following the location
+ of an external data structure called
+ PAYSCHEDULE.
+
+  11
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+Frame \(em Every 8086 memory reference is to a location contained within a
+frame. This frame is designated by the content of a segment register. For
+the linker to form a correct, usable memory reference, it must know what
+the target is, and to which frame the reference is being made. Thus, every
+fixup specifies such a frame, in one of six methods. Some methods use
+data, X, which is in the index number. Other methods require no data.
+
+The five methods of specifying frames are as follows:
+
+_ ________________________________________________________________
+
+(F0) X is a segment index. The frame is the canonic frame of the LSEG
+ that the segment index defines.
+
+(F1) X is a group index. The frame is the canonic frame defined by the
+ group (that is, the canonic frame defined by the LSEG in the group
+ located (eventually) lowest in MAS).
+
+(F2) X is an external index. The frame is determined when the linker
+ finds the external name's public definition. There are two cases:
+
+ _ _________________________________________________________
+
+ (F2a) The linker defines the symbol relative to some LSEG, and
+ there is no associated group. The linker also specifies the
+ LSEG's canonic frame.
+
+ (F2c) Regardless of how the linker defines the symbol, there is an
+ associated group. And the linker specifies the canonic
+ frame of the group. (The Group Index field of the PUBDEF
+ record specifies the group.)
+
+(F4) No X. The frame is the canonic frame of the LSEG that contains
+ Location.
+
+(F5) No X. The target determines the frame. There are three cases:
+
+ _ _________________________________________________________
+
+ (F5a) The target specifies a segment index: in this case, the frame
+ is determined as in (F0).
+
+ (F5b) The target specifies a group index: in this case, the frame is
+ determined as in (F1).
+
+ (F5c) The target specifies an external index: in this case, the
+ frame is determined as in (F2).
+
+
+The nomenclature that describes frames is similar to the above nomencla-
+ture for targets.
+
+_ ________________________________________________________________
+
+Frame: SI (segment name) [F0]
+
+Frame: GI (group name) [F1]
+
+
+
+12
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+  Microsoft Relocatable Object Module Formats
+
+ _ __________________________________________________
+
+Frame: EI (symbol name) [F2]
+
+Frame: Location [F4]
+
+Frame: target [F5]
+
+Frame: None [F6]
+
+For an 8086 memory reference, the frame specified by a self-relative refer-
+ence is usually the canonic frame of the LSEG that contains Location.
+Also, the frame specified by a segment-relative reference is the canonic
+frame of the LSEG that contains the target.
+
+7.3.1 Self-Relative Fixup
+
+A self-relative fixup works as follows: Location implicitly defines a
+memory address\(emnamely, the address of the byte following Location
+(because at the time of a self-relative reference, the 8086 IP (Instruction
+Pointer) is pointing to the byte following the reference).
+
+For 8086 self-relative references, if either the Location or the target is out-
+side the specified frame, the linker gives a warning. Otherwise, there is a
+unique l6-bit displacement that, when added to the address implicitly
+defined by Location, yields the relative position of the target in the frame.
+
+ o If Location is an offset, the linker adds the displacement to Loca-
+ tion (modulo 65,536) and reports no errors.
+
+ o If Location is a lobyte, the displacement must be within the range
+ {-128:127}; otherwise, the linker gives a warning. The linker adds
+ the displacement to Location (modulo 256).
+
+ o If Location is a base, pointer, or hibyte, it is unclear what the
+ translator intended, so the linker's action is undefined.
+
+
+7.3.2 Segment-Relative Fixup
+
+A segment-relative fixup operates as follows: a nonnegative 16-bit number,
+FBVAL, is defined as the frame number of the frame or selector value that
+the fixup specifies. A signed 20-bit number, FOVAL, is defined as the dis-
+tance from the base of the frame to the target. If this signed 20-bit
+number is less than 0 or greater than 65,535, the linker reports an error.
+Otherwise, the linker uses FBVAL and FOVAL to fix up Location in the
+following fashion:
+
+ o If Location is a pointer, the linker adds FBVAL (modulo 65,536) to
+ the high-order word of pointer, and adds FOVAL (modulo 65,536)
+ to the low-order word of pointer.
+
+
+
+  13
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+ o If Location is a base, the linker adds FBVAL (modulo 65,536) to
+ the base and ignores FOVAL.
+
+ o If Location is an offset, the linker adds FOVAL (modulo 65,536) to
+ the offset and ignores FBVAL.
+
+ o If Location is a hibyte, the linker adds (FOVAL/256) (modulo 256)
+ to the hibyte and ignores FBVAL. (The division indicated is
+ integer division; that is, the linker discards the remainder.)
+
+ o If Location is a lobyte, the linker adds (FOVAL modulo 256)
+ (modulo 256) to the lobyte and ignores FBVAL.
+
+
+7.4 Record Sequence
+
+A object code file must contain a sequence of (one or more) modules, or a
+library containing zero or more modules. The following syntax shows the
+valid record ordering necessary to form a module. In addition, the given
+semantic rules provide information about how to interpret the record
+sequence.
+
+_ ________________________________________________________________
+
+Note
+
+ The description language used in the following syntax is defined in
+ WIRTH: CACM, November 1977, vol. 20, no. 11, pp. 822-823. The
+ character strings represented by capital letters are not literals but
+ identifiers, and are further defined in the record format section.
+
+_ ________________________________________________________________
+
+object file = tmodule
+
+tmodule = {THEADR | LHEADR} seg-grp {component} modtail
+
+seg_grp = {LNAMES} {SEGDEF} {EXTDEF | GRPDEF}
+
+component = data | debug_record
+
+data = content_def | thread_def |
+   PUBDEF | EXTDEF | COMDEF | LOCSYM
+
+debug_record = LINNUM
+
+content_def = data_record {FIXUPP}
+
+thread_def = FIXUPP (containing only Thread fields)
+
+data_record = LIDATA | LEDATA
+
+
+14
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+  Microsoft Relocatable Object Module Formats
+
+ _ __________________________________________________
+
+modtail = MODEND
+
+The following rules apply:
+
+ o A FIXUPP record always refers to the previous data record.
+
+ o All LNAMES, SEGDEF, GRPDEF, and EXTDEF records must pre-
+ cede all records that refer to them.
+
+ o Comment records may appear anywhere in a file, except as the first
+ or last record in a file or module, or within a content_def.
+
+
+7.5 Introducing the Record Formats
+
+The following pages present diagrams of record formats in schematic form.
+Here is a sample record format that illustrates the various conventions:
+
+7.5.1 Sample Record Format (SAMREC)
+
+
+-----------------------///---------||||-----------
+| | | | | |
+| REC | Record | Name | Number | CHK |
+| TYP | Length | | | SUM |
+| xxH | | | | |
+| | | | | |
+----------------------///----------||||-----------
+ | |
+ +----rpt-----+
+
+
+The Title and Official Abbreviation
+
+At the top of the figure is the name of the record format described, with
+its official abbreviation. To promote uniformity among various programs,
+including translators and debuggers, use the abbreviation in both code and
+documentation. The abbreviation of the record format is always six
+letters.
+
+The Boxes
+
+Each format is drawn with boxes of two sizes. The narrow boxes represent
+single bytes. The wide boxes each represent two bytes. The wide boxes
+with three slashes in the top and bottom represent a variable number of
+bytes, one or more, depending upon content. The wide boxes with four
+vertical bars in the top and bottom represent four-byte fields.
+
+
+  15
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+RECTYP
+
+The first byte in each record contains a value between 0 and 255, indicat-
+ing the record type.
+
+Record Length
+
+The second field in each record contains the number of bytes in the record,
+exclusive of the first two fields, where a field is a 16-bit number\(ema low
+byte followed by a high byte.
+
+Name
+
+Any field that indicates a name has the following internal structure: the
+first byte contains a number between 0 and 127, inclusive, indicating the
+number of remaining bytes in the field. The remaining bytes are inter-
+preted as a byte string.
+
+Most translators constrain the character set to a subset of the ASCII char-
+acter set.
+
+Number
+
+A four-byte number field represents a 32-bit unsigned integer, where the
+first eight bits (least-significant) are stored in the first byte (lowest
+address), the next eight bits are stored in the second byte, and so on.
+
+Repeated or Conditional Fields
+
+Some portions of a record format contain a field or series of fields that
+may be repeated one or more times. Such portions are indicated by the
+"repeated" or "rpt" brackets below the boxes.
+
+Similarly, some portions of a record format are present only if some given
+condition is true; these fields are indicated by similar "conditional" or
+"cond" brackets below the boxes.
+
+CHKSUM
+
+The last field in each record is a check sum, which contains the two's com-
+plement of the sum (modulo 256) of all other bytes in the record. There-
+fore, the sum (modulo 256) of all bytes in the record is zero.
+
+
+16
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+  Microsoft Relocatable Object Module Formats
+
+ _ __________________________________________________
+
+
+Bit Fields
+
+Sometimes descriptions of contents of fields are at the bit level. Boxes
+with vertical lines drawn through them represent bytes or words; the verti-
+cal lines indicate bit boundaries. Thus, the following byte representation
+has three bit fields of three, one, and four bits, respectively.
+
+---------------------------------
+| | | | | | | | |
+| | | |
+| | | | | | | | |
+---------------------------------
+ 3 1 4
+
+
+7.5.2 T-Module Header Record (THEADR)
+
+
+-----------------------///-----------
+| | | | |
+| REC | Record | T- | CHK |
+| TYP | Length | Module | SUM |
+| 80H | | Name | |
+| | | | |
+----------------------///------------
+
+
+T-Module Name
+
+The T-Module Name field contains the name for the T-module.
+
+7.5.3 L-Module Header Record (LHEADR)
+
+
+-----------------------///-----------
+| | | | |
+| REC | Record | L- | CHK |
+| TYP | Length | Module | SUM |
+| 82H | | Name | |
+| | | | |
+----------------------///------------
+
+
+L-Module Name
+
+The L-Module Name field contains the name for the L-module.
+
+Every module output from a translator must have a T-module or L-module
+header record. The linker requires a THEADR or LHEADR record to come
+first in the module and ignores any others. The LHEADR record is identi-
+cal to the THEADR record, except it has a record type of 82H.
+
+
+  17
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+7.5.4 List of Names Record (LNAMES)
+
+
+-----------------------///-----------
+| | | | |
+| REC | Record | Name | CHK |
+| TYP | Length | | SUM |
+| 96H | | | |
+| | | | |
+----------------------///------------
+ | |
+ +----rpt-----+
+
+The LNAMES record contains a list of names that the following SEGDEF
+and GRPDEF records may use as the names of segments, classes, and/or
+groups.
+
+The order of LNAMES records in a module and the order of names within
+each LNAMES record imply a mapping of these names to numbers: 1, 2, 3,
+etc. These numbers are used as "Name Indices" in the Segment Name
+Index, Class Name Index, and Group Name Index fields of the SEGDEF
+and GRPDEF records.
+
+Name
+
+This repeatable field provides a name, which may have zero length.
+
+7.5.5 Segment Definition Record (SEGDEF)
+
+
+-----------------///-----------------///-----///---///------
+| | | | | | | | |
+|REC| Record | Segment | Segment | Segment |Class|Over |CHK|
+|TYP| Length | ATTR | Length | Name |Name |Lay |SUM|
+|98H| | | | Index |Index|Name | |
+| | | | | | |Index| |
+-----------------///-----------------///-----///---///------
+
+Segment index values 1 through 32,767, which are used in other record
+types to refer to specific LSEGs, are defined implicitly by the sequence in
+which SEGDEF records appear in the object file.
+
+SEG ATTR
+
+The SEG ATTR field provides information on various attributes of a seg-
+ment, and has the following format:
+
+------------------------
+| | | |
+| ACB | Frame | Off- |
+
+18
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+  Microsoft Relocatable Object Module Formats
+
+ _ __________________________________________________
+
+| P | Number | Set |
+| | | |
+| | | |
+-------------r----------
+ | |
+ +---conditional--+
+
+The ACBP byte contains four numbers\(emthe A, C, B, and P attribute
+specifications. This byte has the following format:
+
+---------------------------------
+| | | | | | | | |
+| A | C | B | P |
+| | | | | | | | |
+---------------------------------
+
+A (Alignment) is a 3-bit subfield that specifies the alignment attribute of
+the LSEG. The semantics are defined as follows:
+
+_ ________________________________________________________________
+
+A=0 SEGDEF describes an absolute LSEG.
+
+A=1 SEGDEF describes a relocatable, byte-aligned LSEG.
+
+A=2 SEGDEF describes a relocatable, word-aligned LSEG.
+
+A=3 SEGDEF describes a relocatable, paragraph-aligned LSEG.
+
+A=4 SEGDEF describes a relocatable, page(256-byte)-aligned LSEG.
+
+If A=0, the Frame Number and Offset fields are present. With the Micro-
+soft linker, you may use absolute segments for addressing only; for exam-
+ple, to define the starting address of a ROM and to define symbolic names
+for addresses within the ROM. The linker ignores any data that belongs
+to an absolute LSEG, and issues a warning if absolute segments are
+defined for a program that runs in protected mode.
+
+C (Combination) is a 3-bit subfield that specifies the Combination attri-
+bute of the LSEG. Absolute segments (A=0) must have combination zero
+(C=0). For relocatable segments, the C field encodes a number
+(0,1,2,3,4,5,6, or 7) that indicates how the segment can be combined. One
+way to interpret this attribute is to consider how two LSEGs are com-
+bined.
+
+For example, suppose that X and Y are LSEGs, and that Z is the LSEG
+resulting from the combination of X and Y. Let LX and LY be the lengths
+of X and Y, and let MXY denote the maximum of LX, LY. Now, to accom-
+modate the alignment attribute of Y, let G be the length of any gap
+required between the X and Y components of Z. Then, let LZ denote the
+length of the (combined) LSEG, Z; let dx (0\(<=dx<LX) be the offset in X of
+a byte, and similarly, let dy be the offset (of a byte) in Y.
+
+
+
+  19
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+The following table gives the length LZ of the combined LSEG, Z, and the
+offsets dx' and dy' in Z for the bytes corresponding to dx in X, and to dy in
+Y.
+
+
+Table 7.2
+
+Combination Attribute Example
+
+_ _________________________________________________________________________
+
+C  LZ  dx'  dy'   
+_ ____________________________________________
+2  LX+LY+G  dx  dy+LX+G  "Public" 
+5  LX+LY+G  dx  dy+LX+G  "Stack" 
+6  MXY  dx  dy  "Common" 
+
+_ _________________________________________________________________________
+
+Table 7.2 has no lines for C=0, 1, 3, 4, or 7. C=0 indicates that the relo-
+catable LSEG may not be combined; C=1 and C=3 are undefined. C=4
+and C=7 are treated the same as C=2.
+
+B (Big) is a 1-bit subfield, which, if set to 1, indicates that the segment
+length is exactly 64K (65,536 bytes). In this case, the Segment Length
+field must contain zero.
+
+The P field must always be zero.
+
+The Frame Number and Offset fields (present only for absolute segments,
+A=0) specify the placement in MAS of the absolute segment. Offset is in
+the range between 0 and 15, inclusive. If you want an offset value larger
+than 15, you should adjust the frame number.
+
+Segment Length
+
+The Segment Length field gives a segment's length in bytes. This length
+may be zero. If it is, the linker does not delete the segment from the
+module. The Segment Length field is only large enough to hold numbers
+from 0 to 64K-1, inclusive. To give the segment a length of 64K, you
+must use the B attribute bit in the ACBP field (see SEG ATTR in this sec-
+tion).
+
+Segment Name Index
+
+The segment name is a name that a programmer or translator assigns to
+the segment; for example, CODE, DATA, TAXDATA,
+MODULENAME_CODE, or STACK. The Segment Name Index field pro-
+vides the segment name by indexing into the list of names provided by the
+LNAMES record.
+
+
+20
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+  Microsoft Relocatable Object Module Formats
+
+ _ __________________________________________________
+
+
+Class Name Index
+
+The class name is a name the programmer or translator assigns to a seg-
+ment. If none is assigned, the name is null, and has a length of zero. The
+purpose of a class name is to let the programmer define a "handle" to
+order the LSEGs in MAS; for example, RED, WHITE, BLUE; or ROM
+FASTRAM, DISPLAYRAM. The Class Name Index field provides the
+class name by indexing into the list of names provided by the LNAMES
+record.
+
+Overlay Name Index
+
+The overlay name is a name that the translator and/or the linker, at the
+programmer's request, applies to a segment. The overlay name, like the
+class name, may be null. The Overlay Name Index field provides the over-
+lay name by indexing into the list of names provided by the LNAMES
+record.
+
+_ ________________________________________________________________
+
+Note
+
+ Microsoft language linkers (versions 3.00 and later) ignore the Overlay
+ Name Index field, but the standard MS-DOS linker supports it.
+
+_ ________________________________________________________________
+
+
+7.5.6 Group Definition Record (GRPDEF)
+
+
+-----------------------///---------///------------
+| | | | | |
+| REC | Record | Group | Group | CHK |
+| TYP | Length | Name | Component | SUM |
+| 9AH | | Index | Descriptor | |
+| | | | | |
+--------------------///----------///--------------
+ | |
+ +--repeated--+
+
+
+Group Name Index
+
+The linker may reference a collection of LSEGs with the group name.
+Most importantly, when the LSEGs are eventually fixed in MAS, a frame
+must exist that "covers" every LSEG of the group.
+
+The Group Name Index field provides the group name by indexing into the
+list of names provided by the LNAMES record.
+
+
+  21
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Group Component Descriptor
+
+This repeatable field has the following format:
+
+-----------///-----
+| | |
+| FFH | Segment |
+| | Index |
+| | |
+| | |
+-------------------
+
+The first byte of the Group Component Descriptor field contains 0FFH;
+the descriptor contains one field, which is a segment index that selects the
+LSEG described by a preceding SEGDEF record.
+
+7.5.7 Public Names Definition Record
+ (PUBDEF)
+
+
+---------------------///------///--------------///---------
+| | | | | | | |
+| REC| Record | Public | Public |Public | Type | CHK |
+| TYP| Length | Base | Name |Offset | Index | SUM |
+| 90H| | | | | | |
+| | | | | | | |
+---------------------///-----///--------------///----------
+ | |
+ +---------repeated--------+
+
+The PUBDEF record provides a list of one or more public names. For each
+name, three kinds of data are provided: (1) a base value for the name, (2)
+the offset value of the name, and (3) the type of entity represented by the
+name.
+
+Public Base
+
+The Public Base field has the following format:
+
+-----///---------///-----------------
+| | | |
+| Group | Segment | Frame |
+| Index | Index | Number |
+| | | |
+-----///---------///-----------------
+ | |
+ +conditional+
+
+The Group Index field has a format given earlier, and contains a number
+between 0 and 32,767, inclusive. A nonzero value in the Group Index field
+associates a group with the public symbol, and is used as described in case
+
+22
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+  Microsoft Relocatable Object Module Formats
+
+ _ __________________________________________________
+
+(F2c) of Section 7.3, "Conceptual Framework for Fixups." A zero value in
+the Group Index field indicates that there is no associated group.
+
+The Segment Index field has a format given earlier, and contains a number
+between 0 and 32,767, inclusive.
+
+A nonzero value in the Segment Index field selects an LSEG. In this case,
+the location of each public symbol defined in the record is taken as a non-
+negative displacement (given by a Public Offset field) from the first byte of
+the selected LSEG. Also, the Frame Number field must be absent.
+
+A zero value in the Segment Index field means that the defined symbols are
+absolute, and that the absolute addresses of the symbols are the values in
+the Public Offset field. The Group Index field is ignored.
+
+The Frame Number field contains a frame number only if the value of the
+Segment Index field is zero. The linker ignores this field.
+
+A nonzero value in the Group Index field selects some group. This group is
+taken as the "frame of reference" for references to all public symbols
+defined in this record. That is, the linker performs the following actions:
+
+ o The linker converts any fixup of the form:
+
+ Target: EI(P)
+
+ Frame: Target
+
+ (where P is a public symbol in this PUBDEF record) to a fixup of
+ the form:
+
+ Target: SI(L),d
+
+ Frame: GI(G)
+
+ where SI(L) and d are provided by the Segment Index and Public
+ Offset fields. (The "normal" action would have the frame specifier
+ in the new fixup be the same as in the old fixup: Frame:Target.)
+
+ o When the linker converts the value of a public symbol, as defined
+ by the Segment Index, Public Offset, and (optionally) Frame
+ Number fields, to a {base,offset} pair, the base part is the base of
+ the indicated group.
+
+A zero value in the Group Index field selects no group. The linker does not
+alter the frame specification of fixups referencing the symbol, and takes, as
+the base part of the absolute value of the public symbol, the canonic frame
+of the segment (either LSEG or PSEG) determined by the Segment Index
+field.
+
+
+  23
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Public Name
+
+The Public Name field gives the name of the object whose location in MAS
+the linker makes available to other modules. The name must contain one
+or more characters.
+
+Public Offset
+
+The Public Offset field is a 16-bit value. It is either the offset of the public
+symbol with respect to an LSEG (if the segment index is greater than
+zero), or the offset of the public symbol with respect to the specified frame
+(if the segment index is equal to zero).
+
+Type Index
+
+The Type Index field identifies a single preceding TYPDEF (Type
+Definition Record), which contains a descriptor for the type of entity
+represented by the public symbol. The linker ignores this field.
+
+7.5.8 Communal Names Definition Record
+ (COMDEF)
+
+
+-----------------///---------///-----------------------------
+| | | | | | | |
+| REC | REC | Communal | Type | Data | Communal | CHK |
+| TYP | LEN | Name | Index | Seg | Length | SUM |
+| B0H | | | | Type | | |
+| | | | | | | |
+------------+----///---------///----------------------+------
+ | |
+ +-------repeated--------------------------+
+
+The COMDEF record provides a list of one or more Communal Names,
+which define communal variables. A communal variable is an unitialized
+public variable whose final size and location are not fixed during compil-
+ing.
+
+Communal variables are similar to FORTRAN common blocks in that if
+you are linking object modules that each declare a communal variable,
+then the size of that variable is the largest of the declared variables. In
+the C language, all uninitialized public variables are communal. The fol-
+lowing example shows three different declarations of the same C communal
+variable:
+
+char foo[4]; /* In file a.c */
+char foo[1]; /* In file b.c */
+char foo[1024]; /* In file c.c */
+
+
+24
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+  Microsoft Relocatable Object Module Formats
+
+ _ __________________________________________________
+
+If the objects produced from a.c, b.c, and c.c are linked together, the linker
+allocates 1024 bytes for the character array "foo."
+
+_ ________________________________________________________________
+
+Note
+
+ This record requires that a COMENT record from the Microsoft Exten-
+ sion class appear before it in the object module.
+
+_ ________________________________________________________________
+
+
+Communal Name
+
+The Communal Name field gives the communal variable name, and must
+contain one or more characters.
+
+Communal names are treated as external names when an external name is
+requested elsewhere in the module. Communal names are ordered together
+with external names for the purpose of referring to an external name by its
+index. (See the description of the EXTDEF record later in this section for
+more details on external names.)
+
+Type Index
+
+The Type Index field is ignored by the Microsoft linker.
+
+Data Segment Type
+
+The Data Segment Type field is a single byte that describes the data seg-
+ment in which the communal variable resides. It can contain the following
+values:
+
+ 62H (NEAR) = the communal variable is in the default data segment.
+ 61H (FAR) = the communal variable is not in the default data segment.
+
+
+Communal Length
+
+The Communal Length field describes the length of the communal variable
+according to its data segment type.
+
+If its value is NEAR (62H), the field represents the length in bytes.
+
+If its value is FAR (61H), the field represents:
+
++----///----+-----///------+
+| Number of | Element size |
+
+  25
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+| elements | in bytes |
++----///----+-----///------+
+
+
+The format of all the length fields is as follows:
+
+-------
+| |
+| 0 |
+| to |
+| 128 |
+| |
+-------
+
+-------------------
+| | |
+| | 0 |
+| 129 | to |
+|(81H)| 64K-1 |
+| | |
+-------------------
+
+-------------------------
+| | |
+| | 0 |
+| 132 | to |
+|(84H)| 16M-1 |
+| | |
+-------------------------
+
+-------------------------
+| | |
+| | -2G-1 |
+| 136 | to |
+|(88H)| 2G-1 |
+| | |
+-------------------------
+
+The first format (single byte), containing a value between 0 and 127,
+represents the number given.
+
+The second format, with a leading byte containing 129, represents the
+number contained in the following two bytes.
+
+The third format, with a leading byte containing 132, represents the
+number contained in the following three bytes.
+
+The fourth format, with a leading byte containing 136, represents the
+number contained in the following four bytes with its sign extended if
+necessary.
+
+
+26
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+  Microsoft Relocatable Object Module Formats
+
+ _ __________________________________________________
+
+
+Link-Time Semantics:
+
+A PUBDEF matching a communal variable definition overrides the com-
+munal variable definition. Two communal variable definitions match if
+the names in their definitions match. If two matching definitions disagree
+whether a communal variable is NEAR or FAR, the linker assumes the
+variable is NEAR.
+
+If the variable is NEAR, then its size is the largest of the sizes specified for
+it. If the variable is FAR, the linker issues a warning if the array element
+sizes conflict. If these sizes don't conflict, the variable's size is the element
+size multiplied by the largest number of elements specified. In addition,
+the sum of the sizes of all NEAR variables must not exceed 64K bytes, and
+the sum of the sizes of all FAR variables must not exceed the size of the
+machine's addressable memory space.
+
+HUGE Communal Variables:
+
+A FAR communal variable that is larger than 64K bytes (a HUGE commu-
+nal variable) resides in segments that are contiguous (on an 8086) or that
+have consecutive selectors (on an 80286). No other data items reside in
+the segments occupied by a HUGE communal variable.
+
+If the linker finds matching HUGE and NEAR communal variable
+definitions, it issues a warning message, since it is impossible for a NEAR
+variable to be larger than 64K bytes.
+
+7.5.9 Local Symbols Record (LOCSYM)
+
+
+---------------------///------///--------------///---------
+| | | | | | | |
+| REC| Record | Local | Local | Local | Type | CHK |
+| TYP| Length | Base | Name |Offset | Index | SUM |
+| 92H| | | | | | |
+| | | | | | | |
+---------------------///-----///--------------///----------
+ | |
+ +---------repeated--------+
+
+The LOCSYM record provides information for the definition of a local
+symbol, one that is visible only within the module in which it is defined.
+
+The form and meaning of each of the fields is identical to those in the
+PUBDEF record.
+
+_ ________________________________________________________________
+
+Note
+
+
+  27
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+ The LOCSYM record requires that a COMENT record from the Micro-
+ soft Extensions class appear before it in the object module. Also, it is
+ only recognized by Microsoft language linkers later than version 3.07.
+
+_ ________________________________________________________________
+
+
+7.5.10 External Names Definition Record
+ (EXTDEF)
+
+
+-----------------------///---------///-----------
+| | | | | |
+| REC | Record | External | Type | CHK |
+| TYP | Length | Name | Index | SUM |
+| 8CH | | | | |
+| | | | | |
+-----------------------///---------///-----------
+ | |
+ +-------repeated--------+
+
+The EXTDEF record provides a list of external names, and for each name,
+the type of object it represents. The linker assigns to each external name
+the value provided by an identical public name or local name (if such a
+name is found).
+
+External Name
+
+The External Name field provides the external object name, which must
+have nonzero length.
+
+Including a name in an EXTDEF record is an implicit request to link the
+object file to a module containing the same name declared as a public sym-
+bol, unless the name is defined as a local symbol within the same module
+as the EXTDEF. This request determines whether the external name is
+referenced within some FIXUPP record in the module.
+
+The order of EXTDEF records in a module and the order of external
+names within each EXTDEF record, together with COMDEF records and
+communal names, implies a mapping on the set of all external names
+requested by the module; for example: 1, 2, 3, etc. So to refer to a particu-
+lar external name, the linker uses these numbers as "external indices" in
+the Target Datum and/or Frame Datum fields of FIXUPP records.
+
+External indices may not reference forward. For example, an EXTDEF
+defining the kth object must precede any record referring to that object
+with index k.
+
+
+28
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+  Microsoft Relocatable Object Module Formats
+
+ _ __________________________________________________
+
+
+Type Index
+
+The Type Index field is ignored by the Microsoft linker, except for linker
+versions earlier than 3.05, and for object modules lacking the COMENT
+record from the Microsoft Extensions class, in which case, refer to Section
+7.6 "Microsoft Type Representation for Communal Variables."
+
+7.5.11 Line Numbers Record (LINNUM)
+
+
+----------------------///-----------------------------------
+| | | | | |
+| REC | Record | Line | Line | Line | CHK |
+| TYP | Length | Number | Number | Number | SUM |
+| 94H | | Base | | Offset | |
+| | | | | | |
+----------------------///-----------------------------------
+ | |
+ +--------repeated-------+
+
+The LINNUM record allows a translator to relate a line number in source
+code to the corresponding line in translated code.
+
+Line Number Base
+
+The Line Number Base field has the following format:
+
+-----///---------///-----
+| | |
+| Group | Segment |
+| Index | Index |
+| | |
+-----///---------///-----
+
+The Group Index field is ignored by the Microsoft linker.
+
+The Segment Index field determines the location of the first byte of code
+corresponding to some source line number.
+
+Line Number
+
+The Line Number field provides a binary line number between 0 and
+32,767, inclusive. If the high-order bit is not zero, the number is con-
+sidered undefined.
+
+
+  29
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Line Number Offset
+
+The Line Number Offset field is a 16-bit value, which is the offset of the
+line number with respect to an LSEG (if the segment index is greater than
+zero).
+
+7.5.12 Logical Enumerated Data Record
+ (LEDATA)
+
+
+-----------------------///-----------------------------
+| | | | | | |
+| REC | Record | Segment | Enumerated| | CHK |
+| TYP | Length | Index | Data | DAT | SUM |
+| A0H | | | offset | | |
+| | | | | | |
+-----------------------///-----------------------------
+ | |
+ +-rpt-+
+
+The LEDATA record provides contiguous data from which the linker may
+construct a portion of an 8086 memory image.
+
+Segment Index
+
+The Segment Index field, which must be nonzero, specifies an index rela-
+tive to the SEGDEF records that precede the LEDATA record.
+
+Enumerated Data Offset
+
+The Enumerated Data Offset field specifies an offset that is relative to the
+base of the LSEG specified by the segment index. The field also defines the
+relative location of the first byte of the DAT field. Successive data bytes
+in the DAT field occupy successively higher locations of memory.
+
+DAT
+
+The DAT field provides up to 1024 consecutive bytes of relocatable or
+absolute data.
+
+
+30
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+  Microsoft Relocatable Object Module Formats
+
+ _ __________________________________________________
+
+
+7.5.13 Logical Iterated Data Record (LIDATA)
+
+
+----------------------///---------------------///-----------
+| | | | | | |
+| REC | Record | Segment | Iterated | Iterated | CHK |
+| TYP | Length | Index | Data | Data | SUM |
+| A2H | | | Offset | Block | |
+| | | | | | |
+----------------------///---------------------///-----------
+ | |
+ +-repeated--+
+
+The LIDATA record provides contiguous data from which the linker may
+construct a portion of an 8086 memory image.
+
+Segment Index
+
+The Segment Index field, which must be nonzero, specifies an index that is
+relative to the SEGDEF records that precede the LIDATA record.
+
+Iterated Data Offset
+
+The Iterated Data Offset field specifies an offset that is relative to the base
+of the LSEG specified by the segment index. It also defines the relative
+location of the first byte in the iterated data block. Successive data bytes
+in the iterated data block occupy successively higher locations of memory.
+
+Iterated Data Block
+
+This repeated field is a structure specifying the repeated data bytes. It has
+the following format:
+
+-----------------------------///-----
+| | | |
+| Repeat | Block | |
+| Count | Count | Content |
+| | | |
+| | | |
+-----------------------------///-----
+
+
+
+  31
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+_ ________________________________________________________________
+
+Note
+
+ The linker cannot handle LIDATA records whose iterated Data Blocks
+ are larger than 512 bytes.
+
+_ ________________________________________________________________
+
+
+Repeat Count
+
+The Repeat Count field specifies the number of times to repeat the Con-
+tent portion of this iterated data block. The value of the Repeat Count
+field must be nonzero.
+
+Block Count
+
+The Block Count field specifies the number of iterated data blocks in the
+Content portion of this iterated data block. If the Block Count field has a
+value of zero, the Content portion of the iterated data block is interpreted
+as data bytes. If the field is nonzero, the Content portion is interpreted as
+that number of iterated data blocks.
+
+Content
+
+The Content field may be interpreted in one of two ways, depending on
+the value of the previous Block Count field.
+
+If the Block Count field is zero, this field is a 1-byte count followed by the
+indicated number of data bytes. But if the Block Count field is nonzero,
+the Content field is interpreted as the first byte of another iterated data
+block.
+
+7.5.14 Fixupp Record (FIXUPP)
+
+
+-----------------------///-----------
+| | | | |
+| REC | Record | Thread | CHK |
+| TYP | Length | or | SUM |
+| 9CH | | Fixup | |
+| | | | |
+-----------------------///-----------
+ | |
+ +----rpt----+
+
+The FIXUPP record specifies zero or more fixups. Each fixup requests a
+modification (fixup) to a Location within the previous data record. A data
+record may be followed by more than one FIXUPP record that refers to it.
+
+32
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+  Microsoft Relocatable Object Module Formats
+
+ _ __________________________________________________
+
+Each fixup is specified by a Fixup field that specifies four kinds of data: a
+Location, a mode, a target, and a frame. The frame and target may be
+specified completely within the Fixup field, or by reference to a preceding
+Thread field.
+
+A Thread field specifies a default target or frame that subsequently may be
+referred to. Eight threads are provided\(emfour for frame specification and
+four for target specification. Once a thread has specified a target or frame,
+any Fixup fields that follow (in the same or following FIXUPP records)
+may refer to that target or frame until another Thread field with the same
+type (target or frame) and thread number (0-3) appears (in the same or in
+another FIXUPP record).
+
+Thread
+
+The Thread field has the following format:
+
+-----------///-----
+| | |
+| TRD | Index |
+| DAT | |
+| | |
+-----------///-----
+ | |
+ +conditional+
+
+The TRD DAT (Thread Data) field is a byte with the following internal
+structure:
+
+---------------------------------
+| | | | | | | | |
+| 0 | D | 0 | Method | THRED |
+| | | | | | | | |
+---------------------------------
+
+The D field is one bit and defines the type of thread being used. If D=0,
+this bit defines a target thread, and if D=1, it defines a frame thread.
+
+Method is a 3-bit field containing a number between 0 and 3 (if D=0) or a
+number between 0 and 6 (if D=1).
+
+If D=0, then Method = (0, 1, 2, 4, 5, 6)mod 4, where 0, 1, 2, 4, 5, 6 indi-
+cate methods T0, T1, T2, T4, T5, and T6 of specifying a target. Thus,
+Method indicates the kind of index or frame number required to specify
+the target, without indicating whether the target is specified by a primary
+or secondary method.
+
+
+
+  33
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+If D=1, then Method = 0, 1, 2, 4, 5, corresponding to methods F0, F1, F2,
+F4, F5 of specifying a frame. Here, Method indicates the kind (if any) of
+index required to specify the frame.
+
+The THRED field contains a number between 0 and 3, inclusive, and asso-
+ciates a thread number to the frame or target defined by the Thread field.
+
+The Index field contains a segment index, group index, or external index
+depending on the specification in the Method field. If Method specifies F4
+or F5, this field will not be present.
+
+Fixup
+
+The Fixup field has the following format:
+
+-----------------------///---------///---------///-----
+| | | | | |
+| LOCAT | FIX | Frame | Target | Target |
+| | DAT | Datum | Datum | Dis- |
+| | | | | Placement |
+| | | | | |
+-----------------------///---------///---------///-----
+ | | | |
+ +conditional+conditional+conditional+
+
+The LOCAT field is a byte pair with the following format:
+
+-----------------------------------------------------------------
+| | | | | | | | | | | | | | | | |
+| 1 | M | 0 | LOC | D a t a R e c o r d O f f s e t |
+| | | | | | | | | | | | | | | | |
+-----------------------------------------------------------------
+| | |
++------------lo byte------------+------------hi byte------------+
+
+M is a 1-bit field that specifies the mode of the fixups: self-relative (if
+M=0) or segment-relative (if M=1).
+
+_ ________________________________________________________________
+
+Note
+
+ Self-relative fixups may not be applied to LIDATA records.
+
+_ ________________________________________________________________
+
+LOC is a 3-bit field indicating that the byte(s) in the preceding data record
+to be fixed up are a lobyte (if LOC=0), an offset (if LOC=1), a base (if
+LOC=2), a pointer (if LOC=3), a hibyte (if LOC=4), or a "loader-
+resolved" offset (if LOC=5). Any other values in LOC are invalid.
+
+
+34
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+  Microsoft Relocatable Object Module Formats
+
+ _ __________________________________________________
+
+The Data Record Offset field contains a number between 0 and 1023,
+inclusive, that gives the relative position of the lowest order byte of Loca-
+tion (the actual bytes being fixed up) within the preceding data record.
+The Data Record Offset value is relative to the first byte in the data fields
+in the data records.
+
+_ ________________________________________________________________
+
+Note
+
+ If the preceding data record is an LIDATA record, it is possible for the
+ Data Record Offset value to designate a location within a Repeat
+ Count field or a Block Count field of the Iterated Data Block field.
+ Such a reference is an error. The linker's action on such a malformed
+ record is undefined.
+
+_ ________________________________________________________________
+
+The FIX DAT field is a byte with the following format:
+
+---------------------------------
+| | | | | | | | |
+| F | Frame | T | P | TARGT |
+| | | | | | | | |
+---------------------------------
+
+F is a 1-bit subfield that specifies whether the frame for this Fixup is
+specified by a thread (if F=1) or explicitly (if F=0).
+
+The Frame field contains a number that is interpreted in one of two ways,
+as indicated by the F bit. If F is zero, the Frame field contains a number
+between 0 and 5, inclusive, corresponding to methods F0,...,F5 for specify-
+ing a frame. If F=1, then the Frame field contains a thread number (0-3).
+It specifies the frame most recently defined by a Thread field that defined a
+frame thread with the same thread number. (Note that the Thread field
+may appear in the same FIXUPP record, or in an earlier one.)
+
+T is a 1-bit field that specifies whether the target specified for this fixup is
+defined by reference to a thread (T=1), or is given explicitly in the Fixup
+field (T=0).
+
+P is a 1-bit field that indicates whether the Target is specified by a pri-
+mary method (requires a target displacement, if P=0) or by a secondary
+method (requires no target displacement, if P=1). Since a target thread
+does not have a primary/secondary attribute, the P bit is the only field
+that contains the target specification attribute.
+
+TARGT is interpreted as a 2-bit field. When T=0, it provides a number
+between 0 and 3, inclusive, corresponding to methods T0, T1, T2 or T4,
+T5, T6, depending on the value of P (where P is interpreted as the high-
+order bit of T0, T1, T2, T4, T5, or T6). When a thread specifies the
+
+  35
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+target (if T=1), then the TARGET field specifies a thread number (0-3).
+
+The Frame Datum field is the "referent" portion of a frame specification,
+and is a segment index, group index, or external index. The Frame Datum
+field is present only when the frame is not specified by a thread (if F=0) or
+explicitly by methods F4, F5, or F6.
+
+The Target Datum field is the "referent" portion of a target specification,
+and is a segment index, group index, or external index. The Target Datum
+field is present only when a thread does not specify the target (if T=0).
+
+The Target Displacement field is the 2-byte displacement required by pri-
+mary methods of specifying targets. This field is present if P=0.
+
+_ ________________________________________________________________
+
+Note
+
+ All these methods are described in Section 7.3, "Conceptual Frame-
+ work for Fixups."
+
+_ ________________________________________________________________
+
+
+7.5.15 Module End Record (MODEND)
+
+
+-----------------------------///-----------
+| | | | | |
+| REC | Record | MOD | START | CHK |
+| TYP | Length | TYP | ADDRS | SUM |
+| 8AH | | | | |
+| | | | | |
+-----------------------------///-----------
+ | |
+ +conditional+
+
+The MODEND record serves two purposes. It denotes the end of a module
+and indicates whether the module that just ended specifies an entry point
+to begin execution. If it does not, the linker specifies the execution
+address.
+
+
+36
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+  Microsoft Relocatable Object Module Formats
+
+ _ __________________________________________________
+
+
+MOD TYP
+
+The MOD TYP field specifies the attributes of the module. The bit alloca-
+tion and associated meanings are as follows:
+
+---------------------------------
+| | | | | | | | |
+| MATTR | 0 | 0 | 0 | 0 | 0 | 1 |
+| | | | | | | | |
+---------------------------------
+
+MATTR is a 2-bit field that specifies the following module attributes:
+
+MATTR  Module Attribute 
+_ _______________________________________________
+
+0  Non-main module with no START ADDRS 
+1  Non-main module with START ADDRS 
+2  Main module with no START ADDRS 
+3  Main module with START ADDRS  
+
+
+
+The START ADDRS field (present only if MATTR is 1 or 3) has the fol-
+lowing format:
+
+-----------///---------///-----------------
+| | | | |
+| END | Frame | Target | Target |
+| DAT | Datum | Datum | Dis- |
+| | | | Placement |
+| | | | |
+-----------///---------///-----------------
+ | | | |
+ +conditional+conditional+conditional+
+
+The starting address of a module has all the attributes of any other logical
+reference found in a module. The mapping of a logical starting address to
+a physical starting address is done in the same manner as mapping any
+other logical address to a physical address, as specified in the discussion of
+fixups and the FIXUPP record. The fields of the START ADDRS field
+have the same semantics as the FIX DAT, Frame Datum, Target Datum,
+and Target Displacement fields in the FIXUPP record. Only primary fixup
+methods are allowed. Frame method F4 is not allowed.
+
+
+  37
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+7.5.16 Comment Record (COMENT)
+
+
+-----------------------------------///-----------
+| | | | | |
+| REC | Record | Comment | | CHK |
+| TYP | Length | Type | Comment | SUM |
+| 88H | | | | |
+| | | | | |
+-----------------------------------///-----------
+
+The COMENT record allows translators to include comments in object
+text.
+
+Comment Type
+
+The Comment Type field indicates the type of comment that this record
+carries, allowing you to structure comments for processes that selectively
+act on comments.
+
+The format of the Comment Type field is as follows:
+
+--------------------------------------------------------
+| N | N | | | | | | | Comment |
+| P | L | 0 | 0 | 0 | 0 | 0 | 0 | Class |
+--------------------------------------------------------
+
+The NP (NOPURGE) bit, if set to 1, indicates that this comment cannot
+be purged by object file utility programs that can delete Comment records.
+
+The NL (NOLIST) bit, if set to 1, indicates that the text in the Comment
+field should not appear in the listing file of object file utility programs that
+can list object Comment records.
+
+The Comment Class field is a byte defined as follows:
+
+_ ________________________________________________________________
+
+0 Language Translator Comment (obsolete)
+
+ If the comment field contains one of the strings "MS
+ PASCAL" or "FORTRAN 77," then the comment
+ record enables the dsallocation switch on the Micro-
+ soft linker.
+
+156(9CH) DOS Version
+
+ The Comment field contains a 2-byte integer that
+ specifies the DOS level number.
+
+157(9DH) Memory Model
+
+ Indicates the memory model of the object module.
+ The Comment field contains a single byte with the
+
+38
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+  Microsoft Relocatable Object Module Formats
+
+ _ __________________________________________________
+
+ values S, M, L, or H, for SMALL, MEDIUM, LARGE,
+ or HUGE, respectively. This Comment record is used
+ only by the Microsoft XENIX linker.
+
+158(9EH) Force Segment Ordering
+
+ Causes the linker to use a special segment ordering for
+ executable files. This comment record has the same
+ effect as giving the dosseg switch to Microsoft
+ language versions of the linker.
+
+159(9FH) Library Specifier
+
+129(81H) Library Specifier (obsolete)
+
+ Specifies a library to add to the Microsoft linker's
+ library search list. The Comment field contains the
+ name of the library. Note that unlike all other name
+ specifications, the library name is not prefixed with its
+ length but is determined by the record length. The
+ nodefaultlibrarysearch switch causes the linker to
+ ignore these comment records. The 159(9FH) class
+ record is ignored by XENIX versions of the Microsoft
+ linker.
+
+161(A1H) Microsoft Extensions
+
+ Indicates that the object module contains extensions
+ to the original Microsoft adaptation of the Intel Relo-
+ catable Object Module Format, such as the COMDEF
+ and LOCSYM records.
+
+
+Comment
+
+The Comment field provides the commentary information.
+
+7.6 Microsoft Type Representations
+ for Communal Variables
+
+_ ________________________________________________________________
+
+Note
+
+ Object modules not containing the COMENT record from the Micro-
+ soft Extensions class can represent communal variable definitions only
+ with the obsolete method described here. Also, Microsoft language
+ linkers earlier than version 3.05 can recognize this method only. The
+ newer method uses the Communal Variable Definitions (COMDEF)
+ record.
+
+  39
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+_ ________________________________________________________________
+
+A communal variable is defined in the object text by an EXTDEF record
+and the TYPDEF record to which it refers.
+
+The TYPDEF record of a communal variable has the following format:
+
+-------------------------///-----------
+| REC | Record | | Eight | CHK |
+| TYP | Length | 0 | Leaf | SUM |
+| 8EH | | | Descriptor | |
+-------------------------///-----------
+
+The Eight Leaf Descriptor field has the following format:
+
+---------///------
+| E | Leaf |
+| N | Descriptor |
+---------///------
+
+The EN bitfield specifies whether the next eight leaves in the Leaf Descrip-
+tor field are EASY (if EN = 0) or NICE (if EN = l). This byte is always
+zero for TYPDEFs of communal variables.
+
+The Leaf Descriptor field has one of the following two formats. The for-
+mat for communal variables in the default data segment (NEAR variables)
+is as follows:
+
+------------------///-----///-----
+| NEAR | VAR | Length | VAR |
+| 62H | TYP | In | SUBTYP |
+| | | Bits | |
+------------------///------///----
+ | |
+ +--------+
+ (optional)
+
+The VARTYP (Variable Type) field may be either SCALAR (7BH),
+STRUCT (79H), or ARRAY (77H). The linker ignores the VAR SUBTYP
+field (if one exists). The format for communal variables not in the default
+data segment (FAR variables) is as follows:
+
+-----------------///-------///----
+| FAR | VAR | Number | Element |
+| 61H | TYP | of | Type |
+| | 77H | Elements | Index |
+-----------------///-------///----
+
+The VARTYP field must be ARRAY (77H). The Length in Bits field
+specifies the Number of Elements, and the Element Type Index is an index
+to a previously defined TYPDEF record whose format is that of a NEAR
+
+40
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+  Microsoft Relocatable Object Module Formats
+
+ _ __________________________________________________
+
+communal variable.
+
+The format for the Length in Bits or Number of Elements fields is the
+same as the format of the Communal Length field of the COMDEF record.
+
+Link-Time Semantics:
+
+All EXTDEF records referencing a TYPDEF record of one of the previ-
+ously described formats are treated as communal variables. All others are
+treated as externally defined symbols for which a matching PUBDEF
+record is expected.
+
+For more information, see "Link-Time Semantics" Section 7.5.8, "Commu-
+nal Names Definition Record (COMDEF)."
+
+
+  41
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Chapter 7
+
+Microsoft Relocatable
+
+Object Module Formats
+
+_ ________________________________________________________________
+
+7.1 Introduction 3
+
+7.1.1 Definition of Terms 4
+
+7.2 Module Identification and Attributes 7
+
+7.2.1 Segment Definition 7
+
+7.2.2 Addressing a Segment 7
+
+7.2.3 Symbol Definition 8
+
+7.2.4 Indices 8
+
+7.3 Conceptual Framework for Fixups 9
+
+7.3.1 Self-Relative Fixup 13
+
+7.3.2 Segment-Relative Fixup 13
+
+7.4 Record Sequence 14
+
+7.5 Introducing the Record Formats 15
+
+7.5.1 Sample Record Format (SAMREC) 15
+
+7.5.2 T-Module Header Record (THEADR) 17
+
+7.5.3 L-Module Header Record (LHEADR) 17
+
+7.5.4 List of Names Record (LNAMES) 18
+
+7.5.5 Segment Definition Record (SEGDEF) 18
+
+7.5.6 Group Definition Record (GRPDEF) 21
+
+7.5.7 Public Names Definition Record
+ (PUBDEF) 22
+
+7.5.8 Communal Names Definition Record
+ (COMDEF) 24
+
+7.5.9 Local Symbols Record (LOCSYM) 27
+
+7.5.10 External Names Definition Record
+ (EXTDEF) 28
+
+7.5.11 Line Numbers Record (LINNUM) 29
+
+  1
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+7.5.12 Logical Enumerated Data Record
+ (LEDATA) 30
+
+7.5.13 Logical Iterated Data Record (LIDATA) 31
+
+7.5.14 Fixupp Record (FIXUPP) 32
+
+7.5.15 Module End Record (MODEND) 36
+
+7.5.16 Comment Record (COMENT) 38
+
+7.6 Microsoft Type Representations
+ for Communal Variables 39
+
+
+
+2
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+  41
+
+_ _  |  |  _ _
+
+
+

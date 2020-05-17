@@ -1,0 +1,360 @@
+
+_ _  |  |  _ _
+
+  National Language Support
+
+ _ ____________________________________
+
+
+5.1 Introduction
+
+National language support for this version of MS-DOS 3.3 includes these
+major features:
+
+ o Country-dependent information
+
+ o Support for national keyboard layouts
+
+ o Programming interfaces for national language support
+
+ o Utility commands
+
+Country-dependent information is available on a per-country basis and
+includes the following:
+
+ o Time, date, and currency
+
+ o Lowercase-to-uppercase character-conversion tables
+
+ o Collating sequence for character sorting
+
+ o Valid single-byte characters used in filenames
+
+Selectable keyboard support for different keyboard layouts is provided.
+
+The MS-DOS 3.3 programming interfaces for national language support
+allow applications to use the country-dependent information just
+described. To access this information, applications do not need to change
+the current country code of the system.
+
+Utility commands allow the user to select the keyboard layout and system
+country code.
+
+This version of MS-DOS does not support right-to-left national languages.
+
+5.2 National Language Support Calls
+
+The following function calls allow an application to tailor its operation to
+the current country code and to accept or change the current code page.
+A country code defines the country in which you live or work. MS-DOS
+uses this code to prepare and assign default code pages for your system. A
+code page is a table that defines the character set you are using. A
+character set is a country-specific or language-specific group of characters
+that are translated from the code page table and displayed on your screen
+or printer. Each code page character set contains 256 characters.
+
+
+
+  3
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+The following function calls are also used by MS-DOS 3.3 to support the
+National Language requirements:
+
+ o Function 44H, Code 0CH (Generic IOCtl) \(em supports code page
+ switching on a per-device basis.
+
+ o Function 65H (Get Extended Country Information) \(em returns
+ standard country information, and points to related case-map or
+ collating tables.
+
+ o Function 66H (Get/Set Global Code Page) \(em gets or sets the code
+ page used by the kernel and by all devices.
+
+These functions support access to country-dependent information, all of
+which resides in one file named country.sys.
+
+5.3 Font Files
+
+Font files, also called code page information files, contain the images of
+code page character sets for use by console-screen or printer devices.
+These font files are identified by a filename extension of .cpi. Four font
+files are included with MS-DOS 3.3:
+
+Font file
+ Supported device
+_ ________________________________________________________________
+
+ega.cpi Color console used with an EGA card
+
+lcd.cpi Liquid crystal display
+
+4201.cpi IBM Proprinter
+
+5202.cpi Quietwriter III printer
+
+
+5.3.1 Font File Structure
+
+The contents of printer or console-screen font files are structured as fol-
+lows:
+
+ +--------------------------------------+
+ | 22-BYTE File Header |
+ +--------------------------------------+
+ | WORD Information Header |
+ +--------------------------------------+
+ | 13-BYTE Code Page Entry Header |
+ +--------------------------------------+
+ | 6-BYTE Font Data Header |
+ +--------------------------------------+
+ | Variable size Font Header(s) |
+ +--------------------------------------+
+
+4
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+  National Language Support
+
+ _ ____________________________________
+
+ 
+
+
+ Figure 5.1 Font File Structure
+
+The font file fields are described in the following sections.
+
+5.3.1.1 File Header
+
+Each file must begin with a file header that includes the following:
+
+Length
+ Parameter
+_ ________________________________________________________________
+
+8 BYTES File tag
+
+8 BYTES Reserved
+
+WORD Number of pointers
+
+2 WORDS Offset
+
+where:
+
+File tag begins with the byte 0FFH and is followed by a string "font "
+(seven characters).
+
+Reserved is eight bytes of zeros.
+
+Number of pointers is the number of pointers in the header. For MS-DOS
+3.3, the value of this word should be 1.
+
+Offset is the two-word offset from the beginning of the file.
+
+5.3.1.2 Information Header
+
+Following the file header is a one-word information header:
+
+Length
+ Parameter
+_ ________________________________________________________________
+
+WORD Number of code pages
+
+where:
+
+Number of code pages is the number of code page entries in the file.
+
+
+  5
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+5.3.1.3 Code Page Entry Header
+
+For each code page entry, a header in the following format is included in
+the font file:
+
+Length
+ Parameter
+_ ________________________________________________________________
+
+WORD Length
+
+WORD Pointer
+
+WORD Device type
+
+8 BYTES Device subtype
+
+WORD Code page ID
+
+WORD Reserved
+
+2 WORDS Offset
+
+where:
+
+Length is the size of the code page entry header.
+
+Pointer points to the next code page entry header (last header=0, 0).
+
+Device type is 1 if the device is a console screen, or 2 if the device is a
+printer.
+
+Device subtype names the type of console screen or printer. This field also
+determines the name of the font file. For example, if the subtype is
+"CGA," the font file name is cga.cpi
+
+Code page ID defines a valid three-digit code page identification number.
+Valid code page numbers are 437, 850, 860, 863, and 865.
+
+Reserved is eight bytes of zeros.
+
+Offset is a pointer to the Font Data Header.
+
+5.3.1.4 Font Data Header
+
+The Font Data Header includes the following fields:
+
+Length
+ Parameter
+_ ________________________________________________________________
+
+WORD Reserved
+
+WORD Number of fonts
+
+
+
+6
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+  National Language Support
+
+ _ ____________________________________
+
+WORD Length of font data
+
+where:
+
+Reserved must be 1.
+
+Number of fonts is equal to the number of fonts defined in the font file.
+
+Length of font data is equal to the size of the font-data portion of the font
+file.
+
+5.3.1.5 Font Header
+
+The font-data portion of a font file will vary for each device. The struc-
+ture of the font-data portion consists of a set of data for each font type.
+The following illustrates the data portion of a font file for a console-screen
+device:
+
+font_header: 
+ db 16, 8 ; character pixels 
+ ; (rows, columns)
+ db 0, 0 ; aspect ratio (unused)
+ dw 256 ; number of characters in set
+
+
+len_data equ ($ - font_header)
+
+
+
+
+  7
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Chapter 5
+
+National Language Support
+
+_ ________________________________________________________________
+
+5.1 Introduction 3
+
+5.2 National Language Support Calls 3
+
+5.3 Font Files 4
+
+5.3.1 Font File Structure 4
+
+5.3.1.1 File Header 5
+
+5.3.1.2 Information Header 5
+
+5.3.1.3 Code Page Entry Header 6
+
+5.3.1.4 Font Data Header 6
+
+5.3.1.5 Font Header 7
+
+
+
+  1
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+  7
+
+_ _  |  |  _ _
+
+
+

@@ -1,0 +1,13 @@
+nibdos.obj const2.obj stddata.obj stdtable.obj +
+stddisp.obj stdcode.obj stddosmes.obj time.obj +
+getset.obj parse.obj misc.obj misc2.obj crit.obj +
+cpmio.obj cpmio2.obj fcbio.obj fcbio2.obj +
+search.obj path.obj ioctl.obj delete.obj rename.obj +
+finfo.obj dup.obj create.obj open.obj dinfo.obj+
+isearch.obj abort.obj close.obj dircall.obj+
+disk.obj disk2.obj disk3.obj dir.obj dir2.obj +
+dev.obj mknode.obj rom.obj fcb.obj stdctrlc.obj +
+fat.obj buf.obj proc.obj alloc.obj srvcall.obj +
+util.obj macro.obj macro2.obj handle.obj file.obj +
+lock.obj share.obj
+MSDOS.exe /m;

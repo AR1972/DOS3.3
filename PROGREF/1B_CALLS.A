@@ -1,0 +1,2688 @@
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Terminate Program (Function 00H)
+
+ Call:
+
+ AH = 00H
+ CS
+  Segment address of
+  Program Segment Prefix
+
+ Return:
+
+ None
+
+
+
+Comments:
+
+Function 00H performs the same function as Interrupt 20H. It terminates
+the current process and returns control to its parent process. It also closes
+all open file handles and clears the disk cache. When this interrupt is
+issued, CS must contain the segment address of the Program Segment
+Prefix.
+
+The CS register must contain the segment address of the Program Seg-
+ment Prefix before you call this interrupt.
+
+The following exit addresses are restored from the specified offsets in the
+Program Segment Prefix:
+
+Offset
+ Exit Address
+_ ________________________________________________________________
+
+0AH Program terminate
+
+0EH CONTROL-C
+
+12H Critical error
+
+All file buffers are flushed to disk.
+
+
+  1
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+_ ________________________________________________________________
+
+Warning 
+
+ Close all files that have changed in length before calling this function.
+ If you do not close a changed file, its length is not correctly recorded in
+ the directory. See Function 10H for a description of the Close File sys-
+ tem call.
+
+_ ________________________________________________________________
+
+
+Macro Definition:
+
+
+terminate_program macro
+   xor ah,ah
+   int 21H
+   endm
+
+
+Example:
+
+The following program displays a message and returns to MS-DOS. It uses
+only the opening portion of the sample program skeleton shown in Figure
+1.2.
+
+message db "Displayed by FUNC00H example", 0DH,0AH,"$"
+;
+begin: display message ;see Function 09H
+ terminate_program ;THIS FUNCTION
+code ends
+ end start
+
+
+
+2
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Read Keyboard and Echo (Function 01H)
+
+ Call:
+
+ AH = 01H
+
+ Return:
+
+ AL
+  Character typed
+
+
+
+Comments:
+
+Function 01H waits for a character to be read from standard input, then
+echoes the character to standard output and returns it in AL. If the char-
+acter is CONTROL-C, it executes Interrupt 23H.
+
+Macro Definition:
+
+
+read_kbd_and_echo macro
+   mov ah, 01H
+   int 21H
+   endm
+
+
+Example:
+
+The following program displays and prints characters as you type them. If
+you press the RETURN key, the program sends a linefeed/carriage-return
+sequence to both the display and the printer.
+
+begin: read_kbd_and_echo ;THIS FUNCTION
+ print_char al ;see Function 05H
+ cmp al,0DH ;is it a CR?
+ jne begin ;no, print it
+ print_char 0AH ;see Function 05H
+ display_char 0AH ;see Function 02H
+
+  3
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+ jmp begin ;get another character
+
+
+
+4
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Display Character (Function 02H)
+
+ Call:
+
+ AH = 02H
+ DL
+  Character to be displayed
+
+ Return:
+
+ None
+
+
+
+Comments:
+
+Function 02H sends the character in DL to standard output. If you press
+CONTROL-C, it issues Interrupt 23H.
+
+Macro Definition:
+
+
+display_char macro character
+  mov dl,character
+  mov ah,02H
+  int 21H
+  endm
+
+
+Example:
+
+The following program converts lowercase characters to uppercase before
+displaying them.
+
+begin: read_kbd ;see Function 08H
+ cmp al,"a"
+ jl uppercase ;don't convert
+ cmp al,"z"
+ jg uppercase ;don't convert
+ sub al,20H ;convert to ASCII code
+ ;for uppercase
+
+  5
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+uppercase: display_char al ;THIS FUNCTION
+ jmp begin: ;get another character
+
+
+
+6
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Auxiliary Input (Function 03H)
+
+ Call:
+
+ AH = 03H
+
+ Return:
+
+ AL
+  Character from auxiliary device
+
+
+
+Comments:
+
+Function 03H waits for a character from standard auxiliary devices (AUX,
+COM1, COM2, COM3, COM4), then returns the character in AL. This
+system call does not return a status or error code.
+
+If you press CONTROL-C, it issues Interrupt 23H.
+
+Macro Definition:
+
+
+aux_input macro
+  mov ah,03H
+  int 21H
+  endm
+
+
+Example:
+
+The following program prints characters as soon as it receives them from
+the auxiliary device. It stops printing when it receives an end-of-file char-
+acter (ASCII 26, or CONTROL-Z).
+
+begin: aux_input ;THIS FUNCTION
+ cmp al,1AH ;end of file?
+ je return ;yes, all done
+ print_char al ;see Function 05H
+
+  7
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+ jmp begin ;get another character
+
+
+
+8
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Auxiliary Output (Function 04H)
+
+ Call:
+
+ AH = 04H
+ DL
+  Character for auxiliary device
+
+ Return:
+
+ None
+
+
+
+Comments:
+
+Function 04H sends the character in DL to standard auxiliary. This sys-
+tem call does not return a status or error code.
+
+If you press CONTROL-C, it issues Interrupt 23H.
+
+Macro Definition:
+
+
+aux_output macro character
+  mov dl,character
+  mov ah,04H
+  int 21H
+  endm
+
+
+Example:
+
+The following program gets a series of strings of up to 80 bytes from the
+keyboard and sends each string to the auxiliary device. It stops when you
+type a null string (carriage-return only).
+
+string db 81 dup(?) ;see Function 0AH
+;
+begin: get_string 80,string ;see Function 0AH
+ cmp string[1],0 ;null string?
+
+  9
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+ je return ;yes, all done
+ mov cx, word ptr string[1] ;get string length
+ mov bx,0 ;set index to 0
+send_it: aux_output string[bx+2] ;THIS FUNCTION
+ inc bx ;bump index
+ loop send_it ;send another character
+ jmp begin ;get another string
+
+
+
+10
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Print Character (Function 05H)
+
+ Call:
+
+ AH = 05H
+ DL
+  Character for printer
+
+ Return:
+
+ None
+
+
+
+Comments:
+
+Function 05H sends the character in DL to the standard printer. If you
+press CONTROL-C, it issues Interrupt 23H. This function does not return a
+status or error code.
+
+Macro Definition:
+
+
+print_char macro character
+  mov dl,character
+  mov ah,05H
+  int 21H
+  endm
+
+
+Example:
+
+The following program prints a walking test pattern on the printer. It
+stops if you press CONTROL-C.
+
+line_num db 0
+;
+begin: mov cx,60 ;print 60 lines
+start_line: mov bl,33 ;first printable ASCII
+ ;character (!)
+ add bl,line_num ;to offset one character
+
+  11
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+ push cx ;save number-of-lines counter
+ mov cx,80 ;loop counter for line
+print_it: print_char bl ;THIS FUNCTION
+ inc bl ;move to next ASCII character
+ cmp bl,126 ;last printable ASCII
+ ;character (~)
+ jl no_reset ;not there yet
+ mov bl,33 ;start over with (!)
+no_reset: loop print_it ;print another character
+ print_char 0DH ;carriage return
+ print_char 0AH ;linefeed
+ inc line_num ;to offset 1st char. of line
+ pop cx ;restore #-of-lines counter
+ loop start_line ;print another line
+
+
+
+12
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Direct Console I/O (Function 06H)
+
+ Call:
+
+ AH = 06H
+ DL
+  See text
+
+ Return:
+
+ AL
+  If DL = FFH before call,
+  then zero flag not set means AL
+  has character from standard input.
+  Zero flag set means there was not
+  a character to get, and AL = 0.
+
+
+
+Comments:
+
+The action of Function 06H depends on the value in DL when the function
+is called:
+
+Value in DL
+ Action
+_ ________________________________________________________________
+
+FFH If a character has been read from standard input, it is
+ returned in AL and the zero flag is cleared (0); if a
+ character has not been read, the zero flag is set (1).
+
+Not FFH The character in DL is sent to standard output.
+
+This function does not check for CONTROL-C.
+
+Macro Definition:
+
+
+dir_console_io macro switch
+  mov dl,switch
+  mov ah,06H
+  int 21H
+  endm
+
+
+
+  13
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Example:
+
+The following program sets the system clock to 0 and displays the time
+continuously. When you type any character, the display freezes; when you
+type any character again, the clock is reset to 0 and the display starts
+again.
+
+time db "00:00:00.00",0DH,0AH,"$" ;see Function 09H
+; ;for explanation of $
+;
+begin: set_time 0,0,0,0 ;see Function 2DH
+read_clock: get_time ;see Function 2CH
+ CONVERT ch,time ;see end of chapter
+ CONVERT cl,time[3] ;see end of chapter
+ CONVERT dh,time[6] ;see end of chapter
+ CONVERT dl,time[9] ;see end of chapter
+ display time ;see Function 09H
+ dir_console_io FFH ;THIS FUNCTION
+ cmp al,0 ;character typed?
+ jne stop ;yes, stop timer
+ jmp read_clock ;no, keep timer
+ ;running
+stop: read_kbd ;see Function 08H
+ jmp begin ;start over
+
+
+
+14
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Direct Console Input (Function 07H)
+
+ Call:
+
+ AH = 07H
+
+ Return:
+
+ AL
+  Character from keyboard
+
+
+
+Comments:
+
+Function 07H waits for a character to be read from standard input, then
+returns it in AL. This function does not echo the character or check for
+CONTROL-C. (For a keyboard input function that echoes or checks for
+CONTROL-C, see Function 01H or 08H.)
+
+Macro Definition:
+
+
+dir_console_input macro
+   mov ah,07H
+   int 21H
+   endm
+
+
+Example:
+
+The following program prompts for a password (eight characters max-
+imum) and places the characters into a string without echoing them.
+
+password db 8 dup(?)
+prompt db "Password: $" ;see Function 09H for
+ ;explanation of $
+begin: display prompt ;see Function 09H
+ mov cx,8 ;maximum length of password
+ xor bx,bx ;so BL can be used as index
+
+  15
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+get_pass: dir_console_input ;THIS FUNCTION
+ cmp al,0DH ;was it a carriage return?
+ je return ;yes, all done
+ mov password[bx],al ;no, put character in string
+ inc bx ;bump index
+ loop get_pass ;get another character
+
+
+
+16
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Read Keyboard (Function 08H)
+
+ Call:
+
+ AH = 08H
+
+ Return:
+
+ AL
+  Character from keyboard
+
+
+
+Comments:
+
+Function 08H waits for a character to be read from standard input, then
+returns it in AL. If you press CONTROL-C, it issues Interrupt 23H. This
+function does not echo the character. (For a keyboard input function that
+echoes the character or checks for CONTROL-C, see Function 01H.)
+
+Macro Definition:
+
+
+read_kbd macro
+  mov ah,08H
+  int 21H
+  endm
+
+
+Example:
+
+The following program prompts for a password (eight characters max-
+imum) and places the characters into a string without echoing them.
+
+password db 8 dup(?)
+prompt db "Password: $" ;see Function 09H
+ ;for explanation of $
+begin: display prompt ;see Function 09H
+ mov cx,8 ;maximum length of password
+ xor bx,bx ;BL can be an index
+
+  17
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+get_pass: read_kbd ;THIS FUNCTION
+ cmp al,0DH ;was it a carriage return?
+ je return ;yes, all done
+ mov password[bx],al ;no, put char. in string
+ inc bx ;bump index
+ loop get_pass ;get another character
+
+
+
+18
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Display String (Function 09H)
+
+ Call:
+
+ AH = 09H
+ DS:DX
+  Pointer to string to be displayed
+
+ Return:
+
+ None
+
+
+
+Comments:
+
+Function 09H sends to standard output a string that ends with "$" (the $
+is not displayed).
+
+The DX register must contain the offset (from the segment address in DS)
+of the string.
+
+Macro Definition:
+
+
+display macro string
+  mov dx,offset string
+  mov ah,09H
+  int 21H
+  endm
+
+
+Example:
+
+The following program displays the hexadecimal code of the key that is
+typed.
+
+table db "0123456789ABCDEF"
+result db " - 00H",0DH,0AH,"$" ;see text for
+ ;explanation of $
+begin: read_kbd_and_echo ;see Function 01H
+
+  19
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+ xor ah,ah ;clear upper byte
+ convert ax,16,result[3] ;see end of chapter
+ display result ;THIS FUNCTION
+ jmp begin ;do it again
+
+
+
+20
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Buffered Keyboard Input (Function 0AH)
+
+ Call:
+
+ AH = 0AH
+ DS:DX
+  Pointer to input buffer
+
+ Return:
+
+ None
+
+
+
+Comments:
+
+Function 0AH gets a string from standard input. DX must contain the
+offset (from the segment address in DS) of an input buffer of the following
+form:
+
+Byte
+ Contents
+_ ________________________________________________________________
+
+1 Maximum number of characters in buffer, including the carriage
+ return (you must set this value).
+
+2 Actual number of characters typed, not counting the carriage
+ return (the function sets this value).
+
+3-n Buffer; must be at least as long as the number in byte 1.
+
+Characters are read from standard input and placed in the buffer begin-
+ning at the third byte until a RETURN character (ASCII 0DH) is read. If the
+buffer fills to one less than the maximum, additional characters read are
+ignored and ASCII 07H (Bel) is sent to standard output until a RETURN
+character is read. If you type the string at the console, it can be edited as
+it is being entered. If you press CONTROL-C, it issues Interrupt 23H.
+
+MS-DOS sets the second byte of the buffer to the number of characters
+read (not counting the carriage return).
+
+
+  21
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Macro Definition:
+
+
+get_string macro limit,string
+  mov dx,offset string
+  mov string,limit
+  mov ah,0AH
+  int 21H
+  endm
+
+
+Example:
+
+The following program gets a 16-byte (maximum) string from the key-
+board and fills a 24-line by 80-character screen with it.
+
+buffer label byte
+max_length db ? ;maximum length
+chars_entered db ? ;number of chars.
+string db 17 dup (?) ;16 chars + CR
+strings_per_line dw 0 ;how many strings
+ ;fit on line
+crlf db 0DH,0AH
+;
+begin: get_string 17,buffer ;THIS FUNCTION
+ xor bx,bx ;so byte can be
+ ;used as index
+ mov bl,chars_entered ;get string length
+ mov buffer[bx+2],"$" ;see Function 09H
+ mov al,50H ;columns per line
+ cbw
+ div chars_entered ;times string fits
+ ;on line
+ xor ah,ah ;clear remainder
+ mov strings_per_line,ax ;save col. counter
+ mov cx,24 ;row counter
+display_screen: push cx ;save it
+ mov cx,strings_per_line ;get col. counter
+display_line: display string ;see Function 09H
+ loop display_line
+ display crlf ;see Function 09H
+ pop cx ;get line counter
+ loop display_screen ;display 1 more line
+
+
+
+22
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Check Keyboard Status (Function 0BH)
+
+ Call:
+
+ AH = 0BH
+
+ Return:
+
+ AL
+  00H = no characters in type-ahead buffer
+  FFH = characters in type-ahead buffer
+
+
+
+Comments:
+
+Function 0BH checks whether characters are available from standard
+input (if standard input has not been redirected, it checks the type-ahead
+buffer). If characters are available, AL returns FFH; if not, AL returns 0.
+If CONTROL-C is in the buffer, it issues Interrupt 23H.
+
+Macro Definition:
+
+
+check_kbd_status macro
+   mov ah,0BH
+   int 21H
+   endm
+
+
+Example:
+
+The following program displays the time continuously until you press any
+key:
+
+time db "00:00:00.00",0DH,0AH,"$"
+ .
+ .
+begin: get_time ;see Function 2CH
+ byte_to_dec ch,time ;see end of chapter
+ byte_to_dec cl,time[3] ;see end of chapter
+
+  23
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+ byte_to_dec dh,time[6] ;see end of chapter
+ byte_to_dec dl,time[9] ;see end of chapter
+ display time ;see Function 09H
+ check_kbd_status ;THIS FUNCTION
+ cmp al,0FFH ;has a key been typed?
+ je return ;yes, go home
+ jmp begin ;no, keep displaying
+ ;time
+
+
+
+24
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Flush Buffer, Read Keyboard (Function 0CH)
+
+ Call:
+
+ AH = 0CH
+ AL
+  1, 6, 7, 8, or 0AH = the
+  corresponding function
+  is called.
+  Any other value = no
+  further processing.
+
+ Return:
+
+ AL
+  00H = Type-ahead buffer was
+  flushed; no other
+  processing performed.
+
+
+
+Comments:
+
+Function 0CH empties the standard input buffer (if standard input has not
+been redirected, Function 0CH empties the type-ahead buffer). Further
+processing depends on the value in AL when the function is called.
+
+AL
+ Action
+_ ________________________________________________________________
+
+1,6,7,8, or 0AH The corresponding MS-DOS function is executed.
+
+Any other value No further processing; AL returns 0.
+
+
+Macro Definition:
+
+
+flush_and_read_kbd macro switch
+   mov al,switch
+   mov ah,0CH
+   int 21H
+   endm
+
+
+
+  25
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Example:
+
+The following program both displays and prints characters as you type
+them. If you press the RETURN key, the program sends a carriage-
+return/linefeed sequence to both the display and the printer.
+
+begin: flush_and_read_kbd 1 ;THIS FUNCTION
+ print_char al ;see Function 05H
+ cmp al,0DH ;is it a carriage return?
+ jne begin ;no, print it
+ print_char 0AH ;see Function 05H
+ display_char 0AH ;see Function 02H
+ jmp begin ;get another character
+
+
+
+26
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Reset Disk (Function 0DH)
+
+ Call:
+
+ AH = 0DH
+
+ Return:
+
+ None
+
+
+
+Comments:
+
+Function 0DH flushes all file buffers to ensure that the internal buffer
+cache matches the disks in the drives. It writes out buffers that have been
+modified, and marks all buffers in the internal cache as free. This function
+request is normally used to force a known state of the system; CONTROL-C
+interrupt handlers should call this function.
+
+This function does not update directory entries; you must close changed
+files to update their directory entries (see Function 10H, Close File).
+
+Macro Definition:
+
+
+reset_disk macro
+  mov ah,0DH
+  int 21H
+  endm
+
+
+
+  27
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Example:
+
+The following program flushes all file buffers and selects disk A.
+
+begin: reset_disk
+ select_disk "A"
+
+
+
+28
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Select Disk (Function 0EH)
+
+ Call:
+
+ AH = 0EH
+ DL
+  Logical drive number
+  (0 = A, 1 = B, etc.)
+
+ Return:
+
+ AL
+  Number of logical drives
+
+
+
+Comments:
+
+Function 0EH selects the drive specified in DL (0=A, 1=B, etc.) as the
+current logical drive. AL returns the number of logical drives.
+
+_ ________________________________________________________________
+
+Note
+
+ For future compatibility, treat the value returned in AL with care.
+ For example, if AL returns 5, it is not safe to assume that drives A, B,
+ C, D, and E are all valid drive designators.
+
+_ ________________________________________________________________
+
+
+Macro Definition:
+
+
+select_disk macro disk
+  mov dl,disk[-64]
+  mov ah,0EH
+  int 21H
+  endm
+
+
+
+  29
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Example:
+
+The following program toggles between drive A and drive B to select the
+current drive (in a two-drive system).
+
+begin: current_disk ;see Function 19H
+ cmp al,00H ;drive A: selected?
+ je select_b ;yes, select B
+ select_disk "A" ;THIS FUNCTION
+ jmp return
+select_b: select_disk "B" ;THIS FUNCTION
+
+
+
+30
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Open File (Function 0FH)
+
+ Call:
+
+ AH = 0FH
+ DS:DX
+  Pointer to unopened FCB
+
+ Return:
+
+ AL
+  00H = Directory entry found
+  FFH = No directory entry found
+
+
+
+Comments:
+
+Function 0FH opens a file. DX must contain the offset (from the segment
+address in DS) of an unopened File Control Block (FCB). This call
+searches the disk directory for the named file.
+
+If the call finds a directory entry for the file, AL returns 0 and the FCB is
+filled as follows:
+
+ o If the drive code was 0 (current drive), it is changed to the actual
+ drive used (1=A, 2=B, etc.). This lets you change the current
+ drive without interfering with subsequent operations on this file.
+
+ o Current Block (offset 0CH) is set to 0.
+
+ o Record Size (offset 0EH) is set to the system default of 128.
+
+ o File Size (offset 0FH), Date of Last Write (offset 13H), and Time of
+ Last Write (offset 15H) are set from the directory entry.
+
+Before performing a sequential disk operation on the file, you must set the
+Current Record field (offset 1FH). Before performing a random disk opera-
+tion on the file, you must set the Relative Record field (offset 20H). If the
+default record size (128 bytes) is not correct, set it to the correct length.
+
+If the call doesn't find a directory entry for the file, or if the file has the
+hidden or system attribute, AL returns 0FFH.
+
+
+  31
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Macro Definition:
+
+
+open macro fcb
+ mov dx,offset fcb
+ mov ah,0FH
+ int 21H
+ endm
+
+
+Example:
+
+The following program prints a file named textfile.asc that is on the disk in
+drive B. If a partial record is in the buffer at end-of-file, the routine that
+prints the partial record prints characters until it encounters an end-of-file
+mark (ASCII 26, or CONTROL-Z).
+
+fcb db 2,"TEXTFILEASC"
+ db 26 dup (?)
+buffer db 128 dup (?)
+;
+begin: set_dta buffer ;see Function 1AH
+ open fcb ;THIS FUNCTION
+read_line: read_seq fcb ;see Function 14H
+ cmp al,02H ;end of file?
+ je all_done ;yes, go home
+ cmp al,00H ;more to come?
+ jg check_more ;no, check for partial
+ ;record
+ mov cx,80H ;yes, print the buffer
+ xor si,si ;set index to 0
+print_it: print_char buffer[si] ;see Function 05H
+ inc si ;bump index
+ loop print_it ;print next character
+ jmp read_line ;read another record
+check_more: cmp al,03H ;part. record to print?
+ jne all_done ;no
+ mov cx,80H ;yes, print it
+ xor si,si ;set index to 0
+find_eof: cmp buffer[si],26 ;end-of-file mark?
+ je all_done ;yes
+ print_char buffer[si] ;see Function 05H
+ inc si ;bump index to next
+ ;character
+ loop find_eof
+all_done: close fcb ;see Function 10H
+
+
+
+32
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Close File (Function 10H)
+
+ Call:
+
+ AH = 10H
+ DS:DX
+  Pointer to opened FCB
+
+ Return:
+
+ AL
+  00H = Directory entry found
+  FFH = No directory entry found
+
+
+
+Comments:
+
+Function 10H closes a file. DX must contain the offset (to the segment
+address in DS) of an opened FCB. This call searches the disk directory for
+the file named in the FCB. If it finds a directory entry for the file, it com-
+pares the location of the file with the corresponding entries in the FCB.
+The call then updates the directory entry, if necessary, to match the FCB,
+and AL returns 0.
+
+After you change a file, you must call this function to update the directory
+entry. You should close any FCB (even one for a file that has not been
+changed) when you no longer need access to a file.
+
+If this call doesn't find a directory entry for the file, AL returns FFH.
+
+Macro Definition:
+
+
+close macro fcb
+ mov dx,offset fcb
+ mov ah,10H
+ int 21H
+ endm
+
+
+
+  33
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Example:
+
+The following program checks the first byte of the file named mod1.bas in
+drive B to see if it is FFH and, if it is, prints a message.
+
+message db "Not saved in ASCII format",0DH,0AH,"$"
+fcb db 2,"MOD1 BAS"
+ db 26 dup (?)
+buffer db 128 dup (?)
+;
+begin: set_dta buffer ;see Function 1AH
+ open fcb ;see Function 0FH
+ read_seq fcb ;see Function 14H
+
+ cmp buffer,0FFH ;is first byte FFH?
+ jne all_done ;no
+ display message ;see Function 09H
+all_done: close fcb ;THIS FUNCTION
+
+
+
+34
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Search for First Entry (Function 11H)
+
+ Call:
+
+ AH = 11H
+ DS:DX
+  Pointer to unopened FCB
+
+ Return:
+
+  AL
+  00H = Directory entry found
+  FFH = No directory entry found
+
+
+
+Comments:
+
+Function 11H searches the disk directory for the first matching filename.
+DX must contain the offset (from the segment address in DS) of an
+unopened FCB. The filename in the FCB can include wildcard characters.
+To search for hidden or system files, DX must point to the first byte of an
+extended FCB prefix.
+
+If this call does not find a directory entry for the filename in the FCB, AL
+returns FFH.
+
+But if the call does find a directory entry for the filename in the FCB, AL
+returns 0 and the call creates an unopened FCB of the same type (normal
+or extended) at the Disk Transfer Address as follows:
+
+ 1. If the search FCB was normal, the first byte at the Disk Transfer
+ Address is set to the drive number used in the search (1=A, 2=B,
+ etc.) and the next 32 bytes contain the directory entry.
+
+ 2. If the search FCB was extended, the first byte at the Disk Transfer
+ Address is set to FFH, the next 5 bytes are set to 00H, and the fol-
+ lowing byte is set to the value of the attribute byte in the search
+ FCB. The remaining 33 bytes are the same as the result of the nor-
+ mal FCB (drive number and 32 bytes of directory entry).
+
+If you use Function 12H (Search for Next Entry) to continue searching for
+matching filenames, you must not alter or open the original FCB at
+DS:DX.
+
+  35
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+The attribute field is the last byte of the extended FCB fields that precede
+the FCB (see earlier in this chapter). If the attribute field is zero, Function
+11H searches only normal file entries. It does not search directory entries
+for hidden files, system files, volume label, and subdirectories.
+
+If the attribute field is hidden file, system file, or subdirectory entry (02H,
+04H, or 10H), or any combination of those values, this call also searches all
+normal file entries. To search all directory entries except the volume label,
+set the attribute byte to 16H (hidden file and system file and directory
+entry).
+
+If the attribute field is Volume ID (08H), the call searches only the volume
+label entry.
+
+Macro Definition:
+
+
+search_first macro fcb
+  mov dx,offset fcb
+  mov ah,11H
+  int 21H
+  endm
+
+
+Example:
+
+The following program verifies the existence of a file named report.asm on
+the disk in drive B.
+
+yes db "FILE EXISTS.$"
+no db "FILE DOES NOT EXIST.$"
+crlf db 0DH,0AH,"$"
+fcb db 2,"REPORT *ASM"
+ db 26 dup (?)
+buffer db 128 dup (?)
+;
+begin: set_dta buffer ;see Function 1AH
+ search_first fcb ;THIS FUNCTION
+ cmp al,0FFH ;directory entry found?
+ je not_there ;no
+ display yes ;see Function 09H
+ jmp continue
+not_there: display no ;see Function 09H
+continue: display crlf ;see Function 09H
+
+
+
+36
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Search for Next Entry (Function 12H)
+
+ Call:
+
+ AH = 12H
+ DS:DX
+  Pointer to unopened FCB
+
+ Return:
+
+ AL
+  00H = Directory entry found
+  FFH = No directory entry found
+
+
+
+Comments:
+
+After you use Function 11H (Search for First Entry), you can use Function
+12H to find any additional directory entries that match a filename (con-
+taining wildcard characters). Function 12H searches the disk directory for
+the next matching name. DX must contain the offset (from the segment
+address in DS) of an FCB specified in a previous call to Function 11H. To
+search for hidden or system files, DX must point to the first byte of an
+extended FCB prefix\(emone that includes the appropriate attribute value.
+
+If the call does not find a directory entry for the filename in the FCB, AL
+returns FFH.
+
+But if the call does find a directory entry for the filename in the FCB, AL
+returns 0 and the call creates an unopened FCB of the same type (normal
+or extended) at the Disk Transfer Address (see Function 11H for a descrip-
+tion of how the unopened FCB is formed).
+
+Macro Definition:
+
+
+search_next macro fcb
+  mov dx,offset fcb
+  mov ah,12H
+  int 21H
+  endm
+
+
+  37
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Example:
+
+The following program displays the number of files on the disk in drive B.
+
+message db "No files",0DH,0AH,"$"
+files db 0
+fcb db 2,"???????????"
+ db 26 dup (?)
+buffer db 128 dup (?)
+;
+begin: set_dta buffer ;see Function 1AH
+ search_first fcb ;see Function 11H
+ cmp al,0FFH ;directory entry found?
+ je all_done ;no, no files on disk
+ inc files ;yes, increment file
+ ;counter
+search_dir: search_next fcb ;THIS FUNCTION
+ cmp al,0FFH ;directory entry found?
+ je done ;no
+ inc files ;yes, increment file
+ ;counter
+ jmp search_dir ;check again
+done: convert files,10,message ;see end of chapter
+all_done: display message ;see Function 09H
+
+
+
+38
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Delete File (Function 13H)
+
+ Call:
+
+ AH = 13H
+ DS:DX
+  Pointer to unopened FCB
+
+ Return:
+
+  AL
+  00H = Directory entry found
+  FFH = No directory entry found
+
+
+
+Comments:
+
+Function 13H deletes a file. DX must contain the offset (from the segment
+address in DS) of an unopened FCB. This call searches the directory for a
+matching filename. The filename in the FCB can contain wildcard charac-
+ters.
+
+If the call does not find a matching directory entry, AL returns FFH.
+
+But if the call does find a matching directory entry, AL returns 0 and the
+call deletes the entry from the directory. If the filename contains a wild-
+card character, the call will delete all files which match.
+
+Do not delete open files.
+
+Macro Definition:
+
+
+delete macro fcb
+ mov dx,offset fcb
+ mov ah,13H
+ int 21H
+ endm
+
+
+
+  39
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Example:
+
+The following program deletes each file on the disk in drive B that was last
+written before December 31, 1982.
+
+year dw 1982
+month db 12
+day db 31
+files db 0
+message db "No files deleted.",0DH,0AH,"$"
+fcb db 2,"???????????"
+ db 26 dup (?)
+buffer db 128 dup (?)
+;
+begin: set_dta buffer ;see Function 1AH
+ search_first fcb ;see Function 11H
+ cmp al,0FFH ;directory entry found?
+ jne compare ;yes
+ jmp all_done ;no, no files on disk
+compare: convert_date buffer ;see end of chapter
+ cmp cx,year ;next several lines
+ jg next ;check date in directory
+ cmp dl,month ;entry against date
+ jg next ;above & check next file
+ cmp dh,day ;if date in directory
+ jge next ;entry isn't earlier.
+ delete buffer ;THIS FUNCTION
+ inc files ;bump deleted-files
+ ;counter
+next: search_next fcb ;see Function 12H
+ cmp al,00H ;directory entry found?
+ je compare ;yes, check date
+ cmp files,0 ;any files deleted?
+ je all_done ;no, display No files
+ ;message.
+ convert files,10,message ;see end of chapter
+all_done: display message ;see Function 09H
+
+
+
+40
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Sequential Read (Function 14H)
+
+ Call:
+
+ AH = 14H
+ DS:DX
+  Pointer to opened FCB
+
+ Return:
+
+ AL
+  00H = Read completed successfully
+  01H = EOF
+  02H = DTA too small
+  03H = EOF, partial record
+
+
+
+Comments:
+
+Function 14H reads a record from a specified file. DX must contain the
+offset (from the segment address in DS) of an opened FCB. This call loads
+the record pointed to by the Current Block field (offset 0CH) and Current
+Record (offset 1FH) field at the Disk Transfer Address, then increments the
+Current Block and Current Record fields.
+
+The length of the record is taken from the Record Size field (offset 0EH) of
+the FCB.
+
+AL returns a code that describes the processing:
+
+Code
+ Meaning
+_ ________________________________________________________________
+
+0 Read completed successfully
+
+1 End-of-file; no data in the record
+
+2 Not enough room at the Disk Transfer Address to read one record;
+ read canceled
+
+3 End-of-file; a partial record was read and padded to the record
+ length with zeros
+
+
+
+  41
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Macro Definition:
+
+
+read_seq macro fcb
+  mov dx,offset fcb
+  mov ah,14H
+  int 21H
+  endm
+
+
+Example:
+
+The following program displays a file named textfile.asc that is on the disk
+in drive B; its function is similar to the MS-DOS type command. If a par-
+tial record is in the buffer at end-of-file, the routine that displays the par-
+tial record displays characters until it encounters an end-of-file mark (ASCII
+26, or CONTROL-Z).
+
+fcb db 2,"TEXTFILEASC"
+ db 26 dup (?)
+buffer db 128 dup (?),"$"
+;
+begin: set_dta buffer ;see Function 1AH
+ open fcb ;see Function 0FH
+read_line: read_seq fcb ;THIS FUNCTION
+ cmp al,02H ;DTA too small?
+ je all_done ;yes
+ cmp al,00H ;end-of-file?
+ jg check_more ;yes
+ display buffer ;see Function 09H
+ jmp read_line ;get another record
+check_more: cmp al,03H ;partial record in buffer?
+ jne all_done ;no, go home
+ xor si,si ;set index to 0
+find_eof: cmp buffer[si],26 ;is character EOF?
+ je all_done ;yes, no more to display
+ display_char buffer[si] ;see Function 02H
+ inc si ;bump index
+ jmp find_eof ;check next character
+all_done: close fcb ;see Function 10H
+
+
+
+42
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Sequential Write (Function 15H)
+
+ Call:
+
+ AH = 15H
+ DS:DX
+  Pointer to opened FCB
+
+ Return:
+
+ AL
+  00H = Write completed successfully
+  01H = Disk full
+  02H = DTA too small
+
+
+Function 15H writes a record to a specified file. DX must contain the
+offset (from the segment address in DS) of an opened FCB. This call
+writes the record pointed to by the Current Block field (offset 0CH) and
+Current Record field (offset 1FH) at the Disk Transfer Address, then incre-
+ments the Current Block and Current Record fields.
+
+The record size is taken from the value of the Record Size field (offset 0EH)
+of the FCB. If the record size is less than a sector, the call writes the data
+at the Disk Transfer Address to an MS-DOS buffer; MS-DOS writes the
+buffer to disk when it contains a full sector of data, when the file is closed,
+or when Function 0DH (Reset Disk) is issued.
+
+AL returns a code that describes the processing:
+
+Code
+ Meaning
+_ ________________________________________________________________
+
+0 Write completed successfully
+
+1 Disk full; write canceled
+
+2 Not enough room at the Disk Transfer Address to write one record;
+ write canceled
+
+
+
+  43
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Macro Definition:
+
+
+write_seq macro fcb
+  mov dx,offset fcb
+  mov ah,15H
+  int 21H
+  endm
+
+
+Example:
+
+The following program creates a file named dir.tmp on the disk in drive B,
+containing the disk number (0=A, 1=B, etc.) and filename from each
+directory entry on the disk.
+
+record_size equ 0EH ;offset of Record Size
+; field in FCB
+fcb1 db 2,"DIR TMP"
+ db 26 dup (?)
+fcb2 db 2,"???????????"
+ db 26 dup (?)
+buffer db 128 dup (?)
+;
+begin: set_dta buffer ;see Function 1AH
+ search_first fcb2 ;see Function 11H
+ cmp al,0FFH ;directory entry found?
+ je all_done ;no, no files on disk
+ create fcb1 ;see Function 16H
+ mov fcb1[record_size],12
+ ;set record size to 12
+write_it: write_seq fcb1 ;THIS FUNCTION
+ cmp al,0 ;write successful?
+ jne all_done ;no, go home
+ search_next fcb2 ;see Function 12H
+ cmp al,FFH ;directory entry found?
+ je all_done ;no, go home
+ jmp write_it ;yes, write the record
+all_done: close fcb1 ;see Function 10H
+
+
+
+44
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Create File (Function 16H)
+
+ Call:
+
+ AH = 16H
+ DS:DX
+  Pointer to unopened FCB
+
+ Return:
+
+ AL
+  00H = Empty directory found
+  FFH = No empty directory available
+
+
+Function 16H creates a file. DX must contain the offset (from the segment
+address in DS) of an unopened FCB. MS-DOS searches the directory for
+an entry that matches the specified filename or, if there is no matching
+entry, an empty entry.
+
+If MS-DOS finds a matching entry, it opens the file and sets the length to
+zero (in other words, if you try to create a file that already exists, MS-DOS
+erases it and creates a new, empty file). If MS-DOS doesn't find a matching
+entry but does find an empty directory entry, it opens the file and sets its
+length to zero. In either case, the call creates the file, and AL returns 0. If
+MS-DOS doesn't find a matching entry and there is no empty entry, the
+call doesn't create the file, and AL returns FFH.
+
+You can assign an attribute to the file by using an extended FCB with the
+attribute byte set to the appropriate value (see Extended FCB in Section
+1.9.1).
+
+Macro Definition:
+
+
+create macro fcb
+ mov dx,offset fcb
+ mov ah,16H
+ int 21H
+ endm
+
+
+
+  45
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Example:
+
+The following program creates a file named dir.tmp on the disk in drive B,
+containing the disk number (0 = A, 1 = B, etc.) and filename from each
+directory entry on the disk.
+
+record_size equ 0EH ;offset of Record Size
+; field of FCB
+fcb1 db 2,"DIR TMP"
+ db 26 dup (?)
+fcb2 db 2,"???????????"
+ db 26 dup (?)
+buffer db 128 dup (?)
+;
+begin: set_dta buffer ;see Function 1AH
+ search_first fcb2 ;see Function 11H
+ cmp al,0FFH ;directory entry found?
+ je all_done ;no, no files on disk
+ create fcb1 ;THIS FUNCTION
+ mov fcb1[record_size],12
+ ;set record size to 12
+write_it: write_seq fcb1 ;see Function 15H
+ cmp al,0 ;write successful
+ jne all_done ;no, go home
+ search_next fcb2 ;see Function 12H
+ cmp al,FFH ;directory entry found?
+ je all_done ;no, go home
+ jmp write_it ;yes, write the record
+all_done: close fcb1 ;see Function 10H
+
+
+
+46
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Rename File (Function 17H)
+
+ Call:
+
+ AH = 17H
+ DS:DX
+  Pointer to modified FCB
+
+ Return:
+
+ AL
+  00H = Directory entry found
+  FFH = No directory entry found 
+   or destination already exists
+
+
+Function 17H changes the name of an existing file. DX must contain the
+offset (from the segment address in DS) of an FCB with the drive number
+and filename filled in, followed by a second filename at offset 11H. DOS
+searches the disk directory for an entry that matches the first filename.
+This filename can contain wildcard characters.
+
+If MS-DOS finds a matching directory entry and there is no directory entry
+that matches the second filename, it changes the filename in the directory
+entry to match the second filename in the modified FCB. AL then returns
+zero. If the second filename does contain a wildcard character, this call
+does not change the corresponding characters in the filename of the direc-
+tory entry.
+
+You cannot use this function request to rename a hidden file, a system file,
+or a subdirectory. If MS-DOS does not find a matching directory entry or
+if it finds an entry for the second filename, AL returns FFH.
+
+Macro Definition:
+
+
+rename macro fcb,newname
+ mov dx,offset fcb
+ mov ah,17H
+ int 21H
+ endm
+
+
+
+  47
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Example:
+
+The following program prompts for the name of a file and a new name; it
+then renames the file.
+
+fcb db 37 dup (?)
+prompt1 db "Filename: $"
+prompt2 db "New name: $"
+reply db 15 dup(?)
+crlf db 0DH,0AH,"$"
+;
+begin: display prompt1 ;see Function 09H
+ get_string 15,reply ;see Function 0AH
+ display crlf ;see Function 09H
+ parse reply[2],fcb ;see Function 29H
+ display prompt2 ;see Function 09H
+ get_string 15,reply ;see Function 0AH
+ display crlf ;see Function 09H
+ parse reply[2],fcb[16]
+ ;see Function 29H
+ rename fcb ;THIS FUNCTION
+
+
+
+48
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Get Current Disk (Function 19H)
+
+ Call:
+
+ AH = 19H
+
+ Return:
+
+ AL
+  Currently selected drive
+  (0 = A, 1 = B, etc.)
+
+
+
+Comments:
+
+Function 19H returns the current drive in AL (0=A, 1=B, etc.).
+
+Macro Definition:
+
+
+current_disk macro
+  mov ah,19H
+  int 21H
+  endm
+
+
+Example:
+
+The following program displays the default drive in a two-drive system.
+
+message db "Current disk is $"
+crlf db 0DH,OAH,"$"
+;
+begin: display message ;see Function 09H
+ current_disk ;THIS FUNCTION
+ cmp al,00H ;is it disk A?
+ jne disk_b ;no, it's disk B:
+ display_char "A" ;see Function 02H
+ jmp all_done
+disk_b: display_char "B" ;see Function 02H
+all_done: display crlf ;see Function 09H
+
+  49
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Set Disk Transfer Address (Function 1AH)
+
+ Call:
+
+ AH = 1AH
+ DS:DX
+  Disk Transfer Address
+
+ Return:
+
+ None
+
+
+
+Comments:
+
+Function 1AH sets the Disk Transfer Address. DX must contain the offset
+(from the segment address in DS) of the Disk Transfer Address. Disk
+transfers cannot wrap around from the end of the segment to the begin-
+ning, nor can they overflow into another segment.
+
+If you do not set the Disk Transfer Address, MS-DOS defaults to offset
+80H in the Program Segment Prefix. You can check the current Disk
+Transfer Address with Function 2FH (Get Disk Transfer Address).
+
+Macro Definition:
+
+
+set_dta macro buffer
+  mov dx,offset buffer
+  mov ah,1AH
+  int 21H
+  endm
+
+
+
+50
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Example:
+
+The following program prompts for a letter, converts it to its alphabetic
+sequence (A=1, B=2, etc.), then reads and displays the corresponding
+record from a file named alphabet.dat that is on the disk in drive B. The
+file contains 26 records, each 28 bytes long.
+
+record_size equ 0EH ;offset of Record Size
+ ;field of FCB
+relative_record equ 21H ;offset of Relative Record
+; field of FCB
+fcb db 2,"ALPHABETDAT"
+ db 26 dup (?)
+buffer db 28 dup(?),"$"
+prompt db "Enter letter: $"
+crlf db 0DH,0AH,"$"
+;
+begin: set_dta buffer ;THIS FUNCTION
+ open fcb ;see Function 0FH
+ mov fcb[record_size],28 ;set record size
+get_char: display prompt ;see Function 09H
+ read_kbd_and_echo ;see Function 01H
+ cmp al,0DH ;just a CR?
+ je all_done ;yes, go home
+ sub al,41H ;convert ASCII
+ ;code to record #
+ mov fcb[relative_record],al
+ ;set relative record
+ display crlf ;see Function 09H
+ read_ran fcb ;see Function 21H
+ display buffer ;see Function 09H
+ display crlf ;see Function 09H
+ jmp get_char ;get another character
+all_done: close fcb ;see Function 10H
+
+
+
+  51
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Get Default Drive Data (Function 1BH)
+
+ Call:
+
+ AH = 1BH
+
+ Return:
+
+ AL
+  Sectors per cluster
+ CX
+  Bytes per sector
+ DX
+  Clusters per drive
+ DS:BX
+  Pointer to FAT ID byte
+
+
+Function 1BH retrieves data about the disk in the default drive. The data
+returns in the following registers:
+
+Register
+ Contents
+_ ________________________________________________________________
+
+AL Number of sectors in a cluster (allocation unit)
+
+CX Number of bytes in a sector
+
+DX Number of clusters on the disk
+
+BX returns the offset (to the segment address in DS) of the first byte of the
+File Allocation Table (FAT), which identifies the type of disk in the drive:
+
+Value
+ Type of Drive
+_ ________________________________________________________________
+
+FF Double-sided disk, 8 sectors per track, 40 tracks per side
+
+FE Single-sided disk, 8 sectors per track, 40 tracks per side
+
+FD Double-sided disk, 9 sectors per track, 40 tracks per side
+
+FC Single-sided disk, 9 sectors per track, 40 tracks per side
+
+F9 Double-sided disk, 15 sectors per track, 40 tracks per side
+
+F9 Double-sided disk, 9 sectors per track, 80 tracks per side
+
+F8 Fixed disk
+
+This call is similar to Function 36H (Get Disk Free Space), except that it
+
+52
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+returns the address of the FAT ID byte in BX instead of the number of
+available clusters. It is also similar to Function 1CH (Get Drive Data),
+except that it returns data on the disk in the default drive instead of on
+the disk in a specified drive. For a description of how MS-DOS stores data
+on a disk, including a description of the File Allocation Table, see Chapter
+3, "MS-DOS Technical Information."
+
+_ ________________________________________________________________
+
+Warning 
+
+ The FAT ID byte is no longer adequate to identify the type of drive
+ being used. See Chapter 2, "MS-DOS Device Drivers," for more
+ details.
+
+_ ________________________________________________________________
+
+
+Macro Definition:
+
+
+def_drive_data macro
+  push ds
+  mov ah,1BH
+  int 21H
+  mov al,byte ptr[bx]
+  pop ds
+  endm
+
+
+Example:
+
+The following program displays a message that tells whether the default
+drive is a disk or a fixed disk drive.
+
+stdout equ 1
+;
+msg db "Default drive is "
+dskt db "disk."
+fixed db "fixed."
+crlf db ODH,OAH
+;
+begin: write_handle stdout,msg,17 ;display message
+ jc write_error ;routine not shown
+ def_drive_data ;THIS FUNCTION
+ cmp byte ptr [bx],0F8H ;check FAT ID byte
+ jne disk ;it's a disk
+ write_handle stdout,fixed,6 ;see Function 40H
+ jc write_error ;see Function 40H
+ jmp short all_done ;clean up & go home
+disk: write_handle stdout,dskt,9 ;see Function 40H
+all_done: write_handle stdout,crlf,2 ;see Function 40H
+ jc write_error ;routine not shown
+
+
+  53
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Get Drive Data (Function 1CH)
+
+ Call:
+
+ AH = 1CH
+ DL
+  Drive (0=default, 1=A, etc.)
+
+
+ Return:
+
+ AL
+  0FFH if drive number is invalid;
+  otherwise, sectors per cluster
+ CX
+  Bytes per sector
+ DX
+  Clusters per drive
+ DS:BX
+  Pointer to FAT ID byte
+
+
+Comments:
+
+Function 1CH retrieves data about the disk in the specified drive. DL must
+contain the drive number (0=default, 1=A, etc.). The data returns in the
+following registers:
+
+Register
+ Contents
+_ ________________________________________________________________
+
+AL Number of sectors in a cluster (allocation unit)
+
+CX Number of bytes in a sector
+
+DX Number of clusters on the disk
+
+BX returns the offset (to the segment address in DS) of the first byte of the
+File Allocation Table (FAT), which identifies the type of disk in the drive:
+
+Value
+ Type of Drive
+_ ________________________________________________________________
+
+FF Double-sided disk, 8 sectors per track, 40 tracks per side
+
+FE Single-sided disk, 8 sectors per track, 40 tracks per side
+
+FD Double-sided disk, 9 sectors per track, 40 tracks per side
+
+FC Single-sided disk, 9 sectors per track, 40 tracks per side
+
+
+
+54
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+F9 Double-sided disk, 15 sectors per track, 40 tracks per side
+
+F9 Double-sided disk, 9 sectors per track, 80 tracks per side
+
+F8 Fixed disk
+
+If the drive number in DL is invalid, AL returns 0FFH.
+
+_ ________________________________________________________________
+
+Warning 
+
+ The FAT ID byte is no longer adequate to identify the type of drive
+ being used. See Chapter 2, "MS-DOS Device Drivers" for more details.
+
+_ ________________________________________________________________
+
+This call is similar to Function 36H (Get Disk Free Space), except that it
+returns the address of the FAT ID byte in BX instead of the number of
+available clusters. It is also similar to Function 1BH (Get Default Drive
+Data), except that it returns data on the disk in the drive specified in DL
+instead of the disk in the default drive. For a description of how MS-DOS
+stores data on a disk, including a description of the File Allocation Table,
+see Chapter 3, "MS-DOS Technical Information."
+
+Macro Definition:
+
+
+drive_data macro drive
+  push ds
+  mov dl,drive
+  mov ah,1BH
+  int 21H
+  mov al, byte ptr[bx]
+  pop ds
+  endm
+
+
+Example:
+
+The following program displays a message that tells whether drive B is a
+disk or a fixed disk drive.
+
+stdout equ 1
+:
+msg db "Drive B is "
+dskt db "disk."
+fixed db "fixed."
+crlf db ODH,OAH
+;
+begin: write_handle stdout,msg,11 ;display message
+ jc write_error ;routine not shown
+ drive_data 2 ;THIS FUNCTION
+
+  55
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+ cmp byte ptr [bx],0F8H ;check FAT ID byte
+ jne disk ;it's a disk
+ write_handle stdout,fixed,6 ;see Function 40H
+ jc write_error ;routine not shown
+ jmp all_done ;clean up & go home
+disk: write_handle stdout,dskt,9 ;see Function 40H
+all_done: write_handle stdout,crlf,2 ;see Function 40H
+ jc write_error ;routine not shown
+
+
+
+56
+
+_ _  |  |  _ _
+
+
+

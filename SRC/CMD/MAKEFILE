@@ -1,0 +1,14 @@
+make=msmake /I makefile
+
+all:
+	cd format
+	$(make)
+	cd ..\print
+	$(make)
+	cd ..\sort
+	$(make)
+	cd ..\sys
+	$(make)
+	cd ..
+
+

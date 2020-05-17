@@ -1,0 +1,776 @@
+	    SUPPLEMENT TO MS-DOS 2.XX/3.XX ADAPTATION GUIDE
+
+	 DOCUMENTATION FOR THE MS-DOS 3.30 DISTRIBUTION DISKETTES
+
+This documentation consists of release layout information, a diskette
+directory, instructions for use, and a list of differences between the
+CLONE VERSION and the MS VERSION.
+
+1. MS-DOS 3.30 RELEASE LAYOUT
+
+------------------------------------------------------------------------------
+|			      SOURCE CODE				     |
+|									     |
+|			  10 96 TPI diskettes				     |
+|			       readme.src				     |
+|     Not generally available to OEMS - For Customer Support/Maintenance     |
+------------------------------------------------------------------------------
+	 []	     [] 	    []		[]		 []
+	 []	     [] 	    []		[]		 []
+	SWITCHES SET FOR	   SWITCHES SET FOR	   SWITCHES SET FOR
+	   MS VERSION		    CLONE VERSION	    CLONE VERSION
+	 []	     [] 	    []		[]		 []
+	\[]/	     [] 	   \[]/ 	[]		 []
+	 \/	     [] 	    \/		[]	      BUGFIXES
+-------------------  []    -------------------	[]	      APPLIED
+|		  |  []    |		     |	[]		 []
+|   MS VERSION	  |  []    |  CLONE VERSION  |	[]		 []
+|  SUPPLEMENTAL   |  []    | MESSAGE MODULES |	[]		 []
+| MESSAGE MODULES |  []    |		     |	[]		 []
+|		  |  []    | For all files   |	[]		 []
+|  COMMAND.COM	  |  []    | except for those|	[]		 []
+|  DEBUG.EXE	  |  []    | with complete   |	[]		 []
+|  MORE.COM	  |  []    | source on the   |	[]		 []
+|  RECOVER.EXE	  |  []    | CLONE VERSION   |	[]		 []
+|  SHARE.EXE	  |  []    | DISTRIBUTION    |	[]		 []
+|  MSDOS.SYS	  |  []    | DISKETTES	     |	[]		 []
+|		  |  []    |  readme.mes     |	[]		 []
+|1 96 TPI diskette|  []    |1 96 TPI diskette|	[]		 []
+|avail. on request|  []    |avail. on request|	[]		 []
+-------------------  []    -------------------	[]		 []
+	 []	     [] 	     [] 	[]		 []
+	\[]/	    \[]/	    \[]/       \[]/		\[]/
+	 \/	     \/ 	     \/ 	\/		 \/
+------------------------   -------------------------   -------------------------
+|		       |   |			   |   |		       |
+|      MS VERSION      |   |	CLONE VERSION	   |   |MICROSOFT MS-DOS 3.30  |
+|     SUPPLEMENTAL     |   | DISTRIBUTION DISKETTES|   | PACKAGED PRODUCT      |
+| DISTRIBUTION DISKETTE|   |	  readme.dis	   |   |		       |
+|   1 96 TPI diskette  |   | 2 96 TPI diskettes    |   |  2 48 TPI DISKETTES   |
+| Available on request |   | In OEM Adaptation Kit |   | In OEM Adaptation Kit :
+------------------------   -------------------------   -------------------------
+			   -------------------------
+			   |	BUGFIX DISKETTE    |
+			   |   FIXES THAT MAY BE   |
+			   |APPLIED TO MS-DOS 3.30 |
+			   |	  readme.bf	   |
+			   |  1 96 TPI diskette    |
+			   | In OEM Adaptation Kit |
+			   -------------------------
+
+
+
+	Additional Materials that are part of the OEM Adaptation Kit:
+
+	2.XX/3.XX Adaptation Guide			1 96 TPI diskette
+
+	Machine Readable Documentation
+		User's Guide/User's Reference		2 96 TPI diskette
+		Programmer's Reference
+
+	Hard Copy Documentation
+		User's Guide
+		User's Reference
+		Programmer's Reference
+
+
+   Additional Material that is available on request through an OEM's
+   OEM Account Manager:
+
+	1. Undocumented System Calls Information
+	2. Microsoft MASM 4.00 Retail Package
+
+(Most OEMS either already have these two items or do not have a use for them)
+
+
+The CLONE VERSION DISTRIBUTION DISKETTES contain the files that were produced
+from MS-DOS SOURCE CODE assembled with the IBMVER switch on but the
+IBMCOPYRIGHT switch off.  They contain full SOURCE CODE to IO.SYS, MSBOOT,
+FORMAT.EXE, PRINT.EXE, SORT.EXE and partial source code to MSDOS.SYS to allow
+for the customization of DOSMES.INC. MSDOS32101 is a bootable disk.
+
+The MS VERSION SUPPLEMENTAL DISKETTE contains files that were produced from
+MS-DOS SOURCE CODE assembled with the MS-VER switch on and the IBMVER and
+IBMCOPYRIGHT switch off.  They contain the executables for the four files DEBUG,
+MORE, RECOVER and SHARE as well as partial source for MSDOS.SYS to allow for
+its customization.  These are all the files with version switches in them except
+for the files with complete source on the CLONE VERSION.
+
+The MS-DOS 3.30 PACKAGED PRODUCT contains file that were produced from MS-DOS
+SOURCE CODE assembled with the IBMVER switch on but the IBMCOPYRIGHT
+switch off.  These two disks that are identical to the disks in the manufactured
+packaged product.  There is a boot disk and supplemental disk.
+
+The CLONE VERSION MESSAGE MODULES contain all the source code that must be
+modified for translation to a language other than English.
+These message source modules can be modified, then assembled and linked with the
+object modules that are provided to make the executables.  The object modules
+in this release were made from MS-DOS SOURCE CODE assembled with IBMVER switch
+on and the MSVER and IBMCOPYRIGHT switches off. Code is provided to make all
+the executables on the CLONE VERSION DISTRIBUTION DISKETTES except for
+the files that have complete source provided on the CLONE VERSION DISTRIBUTION
+DISKETTES: IO.SYS, MSBOOT.BIN, FORMAT.EXE, PRINT.EXE, SORT.EXE, SYS.COM, and
+MSDOS.SYS (partial source).
+
+Microsoft now offers complete translations including documentation for the
+following languages: French, German, Spanish, Portuguese, Italian and Dutch.
+OEMs who would like one or more of these translations added to their OEM
+contract should contact their Microsoft OEM Account Manager.
+
+MS VERSION SUPPLEMENTAL MESSAGE MODULES contain all the source code that
+must be modified for translation to a language other than English for the
+six files: COMMMAND.COM, DEBUG.EXE, MORE.COM, RECOVER.EXE, SHARE.EXE and
+MSDOS.SYS.  They are used the same way as the CLONE VERSION MESSAGE MODULES,
+except the the files they are linked to have been assembled with the
+MSVER switch on.
+
+The MS-DOS CLONE VERSION DISTRIBUTION DISKETTES, and the PACKAGE PRODUCT
+DISKETTES are provided as a part the MS-DOS 3.30 Standard OEM ADAPATION KIT.
+
+The CLONE VERSION MESSAGE MODULES, the MS VERSION SUPPLEMENTAL MESSAGE MODULES
+and the MSVER SUPPLEMENTAL DISTRIBUTION DISKETTE, MODULES may be available to
+an OEM under special conditions by request through their Microsoft OEM Account
+Manager.
+
+The SOURCE CODE release is not generally available to OEMS, however, it is
+archived for support purposes by OEM Customer Support.
+
+The BUGFIX DISKETTE contains code that fixes certain known problems in the
+MS-DOS 3.30 Release.  These fixes have been applied to the MS-DOS 3.30
+PACKAGED PRODUCT, but were not applied to the the MS-DOS 3.30 OEM Release
+to maintain IBM COMPATIBILITY.	An OEM can use this code to apply these
+bugfixes to their product.  The specific bugs are described in the release
+notes and in the the README.BF file on the BUGFIX DISKETTE.
+
+
+
+2. Diskette Directories
+
+MS-DOS 3.20 CLONE VERSION DISTRIBUTION DISKETTES	   MS330DIS01
+
+io.sys		system file - BIOS
+msdos.sys	system file - DOS
+command.com	command interpreter
+
+distrib\bin	    <dir>
+
+append.com	utility to set a search path for data files
+assign.com	utility to assign a drive letter to a different drive
+attrib.exe	utility to change or display a file's attribue (read/read only)
+backup.com	utility to backup one or more files from one disk to another
+chkdsk.com	utility to scan disks, check for allocation errors & repair them
+debug.com	utility for debugging
+diskcomp.com	utility to compare to contents of one disk with another
+diskcopy.com	utility to copy disks formatting when necessary
+edlin.com	line editor
+exe2bin.exe	utility to convert .EXE files to .COM files
+fdisk.com	utility to configure hard disk
+find.exe	filter to find text strings in files
+format.com	utility to format disks
+graftabl.com	graphic character generation driver
+graphics.com	utility to print a graphics display on a printer
+join.exe	utility to join a drive to a specific pathname
+keyb.com	utility to replace ROM resident english keyboard program with
+		non-english keyboard program
+label.exe	utility to change or create a disk volume ID
+link.exe	linker 2.40 (part of the MS-DOS 3.30) product
+mode.com	utility to configure parallel and serial ports
+more.com	utility to send output to the console one screen at a time
+nlsfunc.exe	utiltiy to provide support for extended country information
+print.com	utility to print text files on a line printer
+recover.com	utility to recover disk directory
+replace.exe	utility to update previous verison on files on a disk
+restore.exe	utility to restore files that were backed up with backup.exe
+share.exe	utility to install file sharing and locking
+sort.exe	utility to read standard input, sort data and write to a device
+subst.exe	utility to substitute a string alias for a pathname
+sys.com 	utility to transfer msdos system files
+tree.com	utility to display the directory structure & contents of a drive
+xcopy.exe	utility to copy files, directories and lower level directories
+
+
+dev		    <dir>
+
+ansi.sys	installable console device driver
+country.sys	used to identify the date, time, collating sequence,
+		capitalization and folding format for a given country
+display.sys	allows use of code page switching for the display
+driver.sys	installable device driver to support external drives
+keyboard.sys	allows use of code page switch for the keyboard
+printer.sys	allows use of code page switching for the printer
+ramdrive.sys	installable RAM disk device driver
+vdisk.sys	installable RAM disk device driver
+
+src		    <dir>
+
+makefile	builds all CLONE VERSION DISTRIBUTION buildables
+
+src\bios	    <dir>
+
+biomes.inc	io.sys include file
+biostruc.inc	io.sys include file
+clocksub.inc	io.sys include file
+cmosequ.inc	io.sys include file
+dskprm.inc	io.sys include file
+jumpmac.inc	io.sys include file
+locscr		exe2bin location script
+makefile	io.sys link script
+ms96tpi.inc	io.sys include file
+msaux.asm	io.sys source file
+msbds.inc	io.sys include file
+msbio.lnk	msbio.link script
+msbio1.asm	io.sys source file
+msbio2.asm	io.sys source file
+msclock.asm	io.sys source file
+mscon.asm	io.sys source file
+msdata.inc	io.sys include file
+msdisk.asm	io.sys source file
+msequ.inc	io.sys include file
+msextrn.inc	io.sys include file
+msgroup.inc	io.sys include file
+mshard.asm	io.sys source file
+msinit.asm	io.sys source file
+msioctl.inc	io.sys include file
+msload.asm	io.sys source file
+msload.inc	io.sys include file
+mslpt.asm	io.sys source file
+msmacro.inc	io.sys include file
+msstack.inc	io.sys include file
+msvolid.inc	io.sys include file
+pushpop.inc	io.sys include file
+readcloc.inc	io.sys include file
+stkinit.inc	io.sys include file
+stkmes.inc	io.sys include file
+sysconf.asm	io.sys source file
+sysimes.asm	io.sys source file - message text
+sysimes.inc	io.sys include file
+sysinit1.asm	io.sys source file - system initialization
+sysinit2.asm	io.sys source file - system initialization
+
+
+
+src\boot	    <dir>
+
+boot.inc	msboot include file
+boot11.inc	msboot include file
+makefile	msboot make file
+messages.inc	msboot message file
+msboot.asm	msboot source file
+msboot.bin	boot sector
+
+
+
+MS-DOS 3.20 CLONE VERSION DISTRIBUTION DISKETTES	   MS320DIS02
+
+src\cmd\format	    <dir>
+
+bootmes.inc	format include file
+format.asm	format generic source file
+format.lnk	format link script
+forproc.asm	format source file
+make_inc.bas	BASIC program to establish system size - makes filesize.inc
+makefile	makefile for format.com
+messages.asm	format message source file
+messages.inc	format include file
+oemfor.asm	format OEM specific source file
+
+
+src\cmd\print	    <dir>
+
+makefile	makefile for print.com
+nprintf.asm	print source file
+pridefs.inc	print include file
+print.lnk	print link script
+print_r.asm	print resident source code
+print_rm.asm	print resident message source code
+print_rm.inc	print resident include file
+print_t.asm	print transient source code
+print_tm.asm	print transient message source code
+print_tm.inc	print transient include file
+
+
+src\cmd\sort	    <dir>
+
+makefile	make file for sort.exe
+messages.asm	sort message file
+sort.asm	sort source file
+sort.lnk	sort link response file
+
+
+src\cmd\sys	    <dir>
+
+build.bat	batch file to build sys.exe
+messages.asm	sys message file
+sys.asm 	sys source file
+sys.lnk 	sys link response file
+
+src\dos 	    <dir>
+
+abort.obj	msdos.sys object module
+alloc.obj	msdos.sys object module
+arena.inc	msdos.sys include file
+bpb.inc 	msdos.sys include file
+buf.obj 	msdos.sys object module
+buffer.inc	msdos.sys include file
+close.obj	msdos.sys object module
+const2.obj	msdos.sys object module
+cpmfcb.inc	msdos.sys include file
+cpmio.obj	msdos.sys object module
+cpmio2.obj	msdos.sys object module
+create.obj	msdos.sys object module
+crit.obj	msdos.sys object module
+curdir.obj	msdos.sys object module
+delete.obj	msdos.sys object module
+dev.obj 	msdos.sys object module
+devsym.inc	msdos.sys include file
+dinfo.obj	msdos.sys object module
+dir.obj 	msdos.sys object module
+dir2.obj	msdos.sys object module
+dircall.obj	msdos.sys object module
+dirent.inc	msdos.sys include file
+disk.obj	msdos.sys object module
+disk2.obj	msdos.sys object module
+disk3.obj	msdos.sys object module
+divmes.inc	msdos.sys include file
+doscntry.inc	msdos.sys include file
+dosmac.inc	msdos.sys include file
+dosseg.inc	msdos.sys include file
+dossym.inc	msdos.sys include file
+dpb.inc 	msdos.sys include file
+dpl.inc 	msdos.sys include file
+dup.obj 	msdos.sys object module
+error.inc	msdos.sys include file
+exe.inc 	msdos.sys include file
+fat.obj 	msdos.sys object module
+fcb.obj 	msdos.sys object module
+fcbio.obj	msdos.sys object module
+fcbio2.obj	msdos.sys object module
+file.obj	msdos.sys object module
+filemode.inc	msdos.sys include file
+find.inc	msdos.sys include file
+finfo.obj	msdos.sys object module
+getset.obj	msdos.sys object module
+handle.obj	msdos.sys object module
+intnat.inc	msdos.sys include file
+ioctl.inc	msdos.sys include file
+ioctl.obj	msdos.sys object module
+isearch.obj	msdos.sys object module
+lock.obj	msdos.sys object module
+macro.obj	msdos.sys object module
+macro2.obj	msdos.sys object module
+makefile	msdos.sys makefile
+mi.inc		msdos.sys include file
+misc.obj	msdos.sys object module
+misc2.obj	msdos.sys object module
+mknode.obj	msdos.sys object module
+msdos.lnk	msdos.sys link script
+mult.inc	msdos.sys include file
+nibdos.obj	msdos.sys object module
+open.obj	msdos.sys object module
+parse.obj	msdos.sys object module
+path.obj	msdos.sys object module
+pdb.inc 	msdos.sys include file
+proc.obj	msdos.sys object module
+rename.obj	msdos.sys object module
+rom.obj 	msdos.sys object module
+search.obj	msdos.sys object module
+sf.inc		msdos.sys include file
+share.obj	msdos.sys object module
+smdossym.inc	msdos.sys include file
+srvcall.obj	msdos.sys object module
+stdcode.obj	msdos.sys object module
+stdctrlc.obj	msdos.sys object module
+stddata.obj	msdos.sys object module
+stddisp.obj	msdos.sys object module
+stddosme.asm	msdos.sys source file
+stddosme.obj	msdos.sys object module
+stdsw.inc	msdos.sys include file
+stdtable.obj	msdos.sys object module
+syscall.inc	msdos.sys include file
+sysvar.inc	msdos.sys include file
+time.obj	msdos.sys object module
+util.obj	msdos.sys object module
+vector.inc	msdos.sys include file
+
+
+
+src\inc 	    <dir>
+
+macro.inc	general msdos include file
+struc.inc	general msdos include file
+version.inc	general msdos include file
+versiona.inc	general msdos include file
+
+
+
+src\libc	    <dir>
+
+The files in this directory are needed when linking various msdos files.
+
+cds.obj
+dpb.obj
+errtst.obj
+itoupper.obj
+join.c
+kstring.c
+printf.asm
+string.c
+sysvar.c
+
+
+tools		    <dir>
+
+The files in this directory are used to make the parts of the MSDOS product.
+None of these files(except exe2bin.exe), however are part of the MS-DOS product
+and they should not be supplied to an OEM's customers.
+
+convert.exe	special file to change certain .EXE files to .COM files
+dbof.exe	used to insure that boot record is located proper on disk
+exe2bin.exe	same as exe2bin.exe in product - it is included here as
+		as a convenience
+exefix.exe	used by some makefiles to convert .EXE files to .COM files
+gwbasic.exe	same gwbasics as in packaged procduct.	It is used by the
+		makefile in format - it is included here as a convenience
+link.exe	linker used to build msdos
+masm.exe	masm.exe from  Retail Macro Assember 4.00 Product
+masm401.exe	special masm used to build IO.SYS
+msmake.exe	make utility - renamed msmake to distinquish it from XENIX make
+
+3. Instruction for use.
+
+The MS-DOS release installation procedure is described in Chapter 3 of
+the MS-DOS 2.XX/3.XX adaptation guide.
+
+It is recommended that the DISTRIBUTION DISKETTES be copied over
+to a hard disk with the XCOPY.EXE command.  This will set up
+a directory tree that the makefiles can use properly.  All the
+buildables on the DISTRIBUTION DISKETTES can be built by setting
+the PATH to SRC\TOOLS and running the MAKEFILE in the SRC directory.
+It is important that the file be built in the order that they are
+by this makefile as there are some dependencies on former builds
+having occurred.
+
+It is also recommended that MS-DOS 3.30 is installed on the build
+machine and that the build occurs under MS-DOS 3.30.  This will
+insure that any version dependent tools will perform properly.	MS-DOS
+3.30 can be installed on the build machine by booting from the floppy
+with the boot disk from either the DISTRIBUTION DISKETTES or the PACKAGED
+PRODUCT and then using the SYS command or FORMAT /S to get the system to the
+hard disk.
+
+System Filenames are MSDOS.SYS and IO.SYS in FORMAT and SYS.
+
+FORMAT.EXE and SYS.COM have the boot sector installed with INSBIN.EXE.
+
+The OEM NUMBER is FF.
+
+Build Scripts require that the files EXE2BIN.EXE and DEBUG.EXE be in the PATH.
+
+The 8-bit OEM Serial number may be installed with DEBUG by patching MSDOS.SYS
+at location 355H (455 under DEBUG).
+
+The 24-bit OEM User number may be installed with DEBUG by patching MSDOS.SYS
+at location 352H (452 under DEBUG).
+
+SYSINIT  LINK REQUIREMENTS.
+
+    SYSINIT1.obj now requires an external FAR routine called StackInit
+    to be linked.  This routine has available to it the parameters
+
+	    STACK_ADDR:  DWORD
+	    STACK_SIZE:  WORD
+	    STACK_COUNT: WORD
+
+
+    StackInit initializes the Stack Heap and corresponding interrupt
+    vectors used to handle potential hardware driven stack overflows.
+    After completing its task, StackInit issues a RETF to return to
+    SYSINIT1.
+	       To use the IBM compatible SYSINIT1, the OEM must
+    provide the FAR ROUTINE StackInit, whose only task is to issue a
+    RETF.
+
+
+The CONVERT utility is provided in the TOOLS directory to
+rename certain .EXE utilties as .COM files if desired.	The CONVERT utility
+is not part of the MS-DOS product and should be used only as
+described as follows:
+
+
+Documentation for CONVERT.EXE
+
+CONVERT is used by entering CONVERT and an .EXE file name (with the .EXE
+extension).
+
+CONVERT FOO.EXE
+
+	will build a FOO.COM file
+
+
+CONVERT adds an .EXE loader onto the .EXE file image
+
+It should not be confused with EXE2BIN.EXE
+
+These are the differences:
+
+EXE2BIN
+
+   - EXE2BIN is a utility for converting .EXE files to binary (.COM).
+
+   - EXE2BIN produces a .COM file which is smaller than the .EXE file.
+
+   - EXE2BIN may only convert files conforming to a certain documented set of
+     requirements.
+
+   - EXE2BIN can only be used on a file written as .COM file (ORG 100h, not
+     stack segment).
+
+
+CONVERT
+
+   - CONVERT transforms an .EXE file into a .COM file by appending the
+     MS-DOS loader to the end of the file.
+
+   - A CONVERTed file will be larger than an equivalent .EXE file.
+
+   - CONVERT will convert ANY .EXE program.
+
+   - CONVERT should only be used in UNUSUAL circumstances, such as when
+     an application program demands that a file have a .COM extension.
+
+
+
+4. Differences in the files in the MS VERSION and CLONE VERSION of MS-DOS
+
+This is a complete list of the differences between the MS VERSION and the
+CLONE VERSION of MS-DOS at the 3.XX level.  It is intended to illustrate how
+few the differences actually are.  These differences occur as a result of
+conditional assemblies based on whether MSVER or IBMVER is TRUE at the time
+of assembly.
+
+		CLONE VERSION			      MS VERSION
+DOS
+==================================================================
+
+OEM_HANDLER	OEM_HANDLER code	       OEM_HANDLER code
+		for call F8 NOT included       for call F8 included
+
+DOS header	IBM Text			MSDOS text
+
+Print of DOS	NO				YES
+  version at
+  boot time
+
+INT 25,26 AH	YES				NO
+  error code
+  mapping
+
+International	Large set			US table only
+  tables
+
+Case map call	IBM PC specific 		None
+  in internat
+  tables
+
+Function Key	IBM PC				Z-19 (Zenith terminal)
+  definition
+
+^N defined as	NO				YES
+  special char
+  equivalent
+  to ^P
+
+******************************************************************
+
+		CLONE VERSION			      MS VERSION
+SHARE
+==================================================================
+
+     NOTE: The MS VERSION and CLONE VERSION  do have minor
+	   differences and will not file compare.  The differences
+	   have to do with the DOS data modules linked in with SHARE.
+	   The CLONE VERSION SHARE, MSDOS and REDIR should be used only with
+	   each other and the MS VERSION SHARE, MSDOS and REDIR should be
+	   used only with each other.
+
+*****************************************************************************
+
+		CLONE VERSION			      MS VERSION
+COMMAND
+==================================================================
+
+CLS		Special IBM code to detect	Assumes ANSI support,
+		if ANSI driver installed.	outputs ANSI CLS sequence.
+		If no ANSI driver, CLS done
+		by direct calls to INT 10H
+
+ROM exec	Special code for PC-Jr ROM	No ROM exec code
+		cartridges.
+
+
+*****************************************************************************
+
+		CLONE VERSION			      MS VERSION
+PRINT
+==================================================================
+		INT 17,13,14,5,15 handlers	No special handlers
+
+		IBM specific timer int code	No timer int code
+
+	NOTE: SOURCE CODE FOR PRINT IS SENT SO THAT
+		OEMs CAN PORT THEM TO THEIR MACHINES.
+
+	NOTE: SETTING THE IBM SWITCHES TO TRUE IN PRINT
+		WILL NOT YIELD A BINARY THAT IS THE SAME AS THE IBM
+		3.2 .
+
+		In PRINT's case this is due to some slight code
+		re-organization that was needed to get a valid
+		PRINT with the IBM switches set to FALSE.
+
+
+*****************************************************************************
+
+		CLONE VERSION			      MS VERSION
+DEBUG
+==================================================================
+INT controler	Contains code to twiddle	No code included
+		one of the 8259 interrupt
+		controller registers to
+		fix the trace of the timer
+		int problems
+
+Screen Width	Issues INT 10H to get		Assumes screen is at
+		screen width.			least 80 column
+
+*****************************************************************************
+
+		CLONE VERSION			      MS VERSION
+FORMAT
+==================================================================
+			MS VERSION CLONE VERSION
+			ARE IDENTICAL
+
+*****************************************************************************
+
+		CLONE VERSION			      MS VERSION
+SYS
+==================================================================
+
+Put Boot	Contains Boot sector		No put boot code
+		output code to put
+		correct boot sectors
+		on SYSed disks
+
+Check for valid Uses INT 25 to make sure	Minimal checking of
+destination	that destination disk is	MSDOS.SYS size
+		empty or has correct IBM
+		bootable disk format
+
+*****************************************************************************
+
+		CLONE VERSION			      MS VERSION
+RECOVER
+==================================================================
+ROM COM AREA	Twiddles a byte in the ROM	No code
+TWIDDLE 	communication area on single
+		drive systems to indicate
+		drive changed.
+
+*****************************************************************************
+
+		CLONE VERSION			      MS VERSION
+EXE2BIN
+==================================================================
+			MS VERSION CLONE VERSION
+			ARE IDENTICAL
+
+*****************************************************************************
+
+		CLONE VERSION			      MS VERSION
+CHKDSK
+==================================================================
+			MS VERSION CLONE VERSION
+			ARE IDENTICAL
+
+*****************************************************************************
+
+		CLONE VERSION			      MS VERSION
+FIND
+==================================================================
+			MS VERSION CLONE VERSION
+			ARE IDENTICAL
+
+*****************************************************************************
+
+		CLONE VERSION			      MS VERSION
+ASSIGN
+==================================================================
+			MS VERSION CLONE VERSION
+			ARE IDENTICAL
+
+*****************************************************************************
+
+		CLONE VERSION			      MS VERSION
+ATTRIB
+==================================================================
+			MS VERSION CLONE VERSION
+			ARE IDENTICAL
+
+*****************************************************************************
+
+		CLONE VERSION			      MS VERSION
+SUBST
+==================================================================
+			MS VERSION CLONE VERSION
+*			 ARE IDENTICAL
+
+*****************************************************************************
+
+		CLONE VERSION			      MS VERSION
+JOIN
+==================================================================
+			MS VERSION CLONE VERSION
+			ARE IDENTICAL
+
+*****************************************************************************
+
+		CLONE VERSION			      MS VERSION
+EDLIN
+==================================================================
+			MS VERSION CLONE VERSION
+			ARE IDENTICAL
+
+*****************************************************************************
+
+		CLONE VERSION			      MS VERSION
+MORE
+==================================================================
+Screen Width	Issues INT 10H to get		Assumes screen is
+		width of screen 		at least 80 column
+
+Non printing	Assumes all chars < 20H 	Assumes chars < 20H
+chars		except for BELL (07) are	are non printing and
+		printing characters which	do not advance the
+		advance the cursor one		cursor if output
+		position if output.
+
+*****************************************************************************
+
+		CLONE VERSION			      MS VERSION
+SORT
+==================================================================
+Internat chars	Defines coalating sequence	Chars > 7FH are sorted
+		for some chars > 7FH approp	in value order
+		to IBM international char
+		sets
+
+*****************************************************************************
+
+		CLONE VERSION			      MS VERSION
+BIOS (SYSINIT)
+==================================================================
+MEM scan	Mem scan code not included	Includes memory scan
+		Assumes BIOS sets memory	code if OEM BIOS
+		size variable always.		does not set memory
+						size variable.

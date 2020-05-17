@@ -1,0 +1,1203 @@
+
+_ _  |  |  _ _
+
+         Index
+
+80186 microprocessor, 419
+80286 microprocessor, 419
+8086 microprocessor, 419
+8086 object language, 419
+8086 object module format. See Object Module Formats (OMF)
+Absolute Disk Read (Interrupt 25H), 46
+Absolute Disk Write (Interrupt 26H), 49
+Absolute segment, LSEG, 437, 439
+ACBP byte, SEG ATTR, 437
+Address mode, 427
+Alignment attribute, 437
+Alignment subfield, SEG ATTR, 437
+Allocate Memory (Function 48H), 229
+Application
+        Frame Number, protected-mode, 431
+Archive bit, 389
+Array, character, 444
+ASCII character set, 434
+ASCIZ string, 239, 249
+Assign list, 14
+Attribute byte, 13
+Attribute field, 331
+Attribute, LSEG
+        Alignment, 437
+        Combination, 438
+        SEG ATTR field, SEGDEF, 437
+Attribute
+        primary, 456
+        secondary, 456
+        Target, 456
+AUTOEXEC file, 386
+Auxiliary Input (Function 03H), 60
+Auxiliary Output (Function 04H), 62
+base, definition, 426
+Big subfield, SEG ATTR, 439
+BIN format file, 326
+Binary line number, 450
+BIOS Parameter ^Block (<BPB), 339
+BIOS Parameter Block (BPB), 342, 351
+Bit 8, 336
+Bit 9, 337
+Bitfield, 435
+Block Count subfield, Iterated Data Block, 452
+Block devices
+        device drivers, 346
+        disk drives, 327
+        example, 355
+        installation, 339
+Boot sector, 351
+BPB pointer, 339
+Buffered Keyboard Input (Function 0AH), 74
+BUILD BPB, 332
+Build BPB, 342, 343
+Busy bit, 337, 346, 348
+Byte, representation, 435
+C language, 444
+CALL instruction, 427
+Cancel Assign-List Entry (Function 5FH, Code 04H), 294
+Canonic Frame, 429
+Canonic Frame, definition, 422
+Carry flag, 22
+Case-Mapping, 160
+Change, 168
+Change Directory Entry (Function 56H), 256
+Character array, 444
+Character device driver, example, 371
+Character devices, 327
+Character set
+        definition, 405
+Check Keyboard Status (Function 0BH), 76
+CHKSUM field, SAMREC, 434
+Class Name, definition, 422
+CLOCK device, 332, 353
+Close, 178
+Close File (Function 10H), 87
+Cluster, 387
+Code page
+        definition, 405
+Code segment, CS, 424
+Combination attribute, 438
+Combination subfield, SEG ATTR, 438
+COMDEF record, 424
+        field
+        CHKSUM, 443
+        Communal Length, repeated, 445
+        Communal Name, repeated, 444
+        Data Segment Type, repeated, 445
+        Record Length, 443
+        RECTYP, 443
+        Type Index, repeated, 444
+        length fields, format, 445
+        order with respect to COMENT, 444
+        purpose, 443
+        schematic, 443
+COMENT record
+        field
+        CHKSUM, 458
+        Comment, 459
+        Comment Type, 458
+        Record Length, 458
+        RECTYP, 458
+        order with respect to COMDEF, 444
+        order with respect to LOCSYM, 447
+        purpose, 458
+        schematic, 458
+        subfield of Comment Type
+        Comment Class, 459
+Command code field, 335
+Command processor, 386
+Command.com, 386
+Commands, utility, NLS, 15, 405
+Comment class subfield, Comment Type, 459
+Comment field, COMENT, 459
+Comment record, 432
+Comment Record (COMENT), 458
+Comment Type field, COMENT
+        bit settings, 459
+        definition, 458
+        format, 459
+Commit File (Function 68H), 304
+Common blocks, FORTRAN, 444
+Communal Length field, COMDEF, 445
+Communal Name field, COMDEF, 444
+Communal Name, ordering with External Name, 444
+Communal Names Definition Record (COMDEF), 443
+Communal names definition record. See COMDEF record
+Communal variable, 460
+        FAR, 445, 446
+        HUGE, 447
+        NEAR, 445, 446
+        similarity to FORTRAN common block, 444
+        uninitialized public variable, 444
+Compatibility, ensuring, 465
+Complete Name, definition, 423
+Computer language
+        C, 444
+        FORTRAN, 444
+COMSPEC, 400
+Con device, 328
+Content subfield, Iterated Data Block, 452
+Control blocks, 397
+Control information, 413
+CONTROL-C, 152
+CONTROL-C Address (Interrupt 23H), 386
+CONTROL-C Handler Address (Interrupt 23H), 40
+Country code, current, 405
+Country code
+        definition, 405
+Country-dependent information, NLS, 15, 405
+Country-dependent information
+        case conversion tables, 15, 405
+        collating sequence, character sorting, 15, 405
+        currency, 15, 405
+        date, 15, 405
+        DBCS environmental vector, 15, 405
+        keyboard support, 15, 405
+        time, 15, 405
+        valid single-byte characters, 15, 405
+Country.sys file, 406
+Create, 125, 164, 170
+Create File (Function 16H), 100
+Create New File (Function 5BH), 273
+Create Temporary File (Function 5AH), 269
+Critical Error Handler Address (Interrupt 24H), 41, 386
+CS register, 424
+DAT field, LEDATA, 451
+Data Record, 453
+Data Segment Type field, COMDEF, 445
+Data segment
+        DS, 424
+        ES, 424
+        FAR, 445
+        NEAR, 445
+Delete Directory Entry (Function 41H), 184
+Delete File (Function 13H), 94
+Descriptor, Group Component, GRPDEF, 441
+Device control, 11
+Device drivers
+        block, 327
+        creating, 328, 390
+        example, 355, 371
+        installable, 325
+        installing, 329
+        non-resident, 325
+        preserving registers, 355
+        resident, 325
+Device Handles, 9
+Device header, 330
+Device interrupt routine, 329
+Device management, programming hints, 467
+Device strategy routine, 329
+Device-related function requests, 11
+Direct Console Input (Function 07H), 68
+Direct Console I/O (Function 06H), 66
+Directory Entry, 12
+Directory-Related Function Requests, 12
+Directory-related function requests, 12
+Disk allocation, 387
+Disk Directory, 387
+Disk formats
+        IBM, 392
+        standard MS-DOS, 392
+Disk Transfer Address (DTA), 98, 250, 400
+Dispatch table, 354
+Display Character (Function 02H), 58
+Display String (Function 09H), 72
+Done bit, 336, 355
+DS register, 424
+Duplicate File Handle (Function 45H), 221
+Eight Leaf Descriptor field, TYPDEF
+        format, 461
+        subfield
+        EN, 461
+        Leaf Descriptor, 461
+Element Type Index subfield, Leaf Descriptor, 461
+EN subfield, Eight Leaf Descriptor, 461
+End address, 339
+End Process (Function 4CH), 245, 399
+Enumerated Data Offset field, LEDATA, 450
+Error bit, 355
+Error codes, 22
+Error Handling, 27
+Error handling, 386
+ES register, 424
+EXE device drivers, 326
+.exe files, 413
+exe files, 413
+EXE format file, 326
+EXE loader, 326
+EXTDEF record, 424, 432
+        field
+        CHKSUM, 448
+        External Name, repeated, 448
+        Record Length, 448
+        RECTYP, 448
+        Type Index, repeated, 449
+        purpose, 448
+        schematic, 448
+Extended error codes, 24
+Extended FCB, 20
+Extensions class, Microsoft, 447, 449
+External Index, 428, 429, 430
+External indices, 448
+External Name field, EXTDEF, 448
+External Name
+        mapping, 448
+        referenced in FIXUPP record, 448
+External Names Definition Record (EXTDEF), 448
+External names definition record. See EXTDEF record
+FAR data segment, 445
+FAR subfield, Leaf Descriptor, 461
+FAR variable format, Leaf Descriptor, 461
+FAT, 343, 390
+FAT ID byte, 108, 111
+FAT <ID byte, 351
+FBVAL, definition, 431
+FCB, 18
+config.sys, 329
+config.sys file, 325
+io.sys file, 389
+File Allocation Table, 390
+File and directory management, programming hints, 469
+File attributes, 13
+File Control Block
+        definition, 18
+        extended, 20
+        fields, 19
+        format, 18
+        opened, 18
+        unopened, 18
+File locking, programming hints, 470
+Filename, 134
+File-related function requests, 10
+File-sharing function requests, 11
+msdos.sys file, 386, 389
+Find First File (Function 4EH), 249
+Find Next File (Function 4FH), 252
+FIX DAT subfield, Fixup
+        internal structure, 455
+        schematic, 455
+Fixup field, FIXUPP
+        data type
+        Frame, 453
+        Location, 453
+        Mode, 453
+        Target, 453
+        definition, 453
+        schematic, 454
+        subfield
+        LOCAT, 454
+Fixup mode
+        segment-relative, 454
+        self-relative, 454
+FIXUP record, 427
+Fixup
+        definition, 425
+        Frame, 426
+        Location, 426
+FIXUPP record, 432
+FIXUPP Record (FIXUPP), 452
+FIXUPP record
+        External Name referenced in, 448
+        field
+        CHKSUM, 453
+        Fixup, repeated, 453
+        Frame Datum, conditional, 448
+        Record Length, 453
+        RECTYP, 453
+        Target Datum, conditional, 448
+        Thread, repeated, 453
+        purpose, 453
+        schematic, 452
+        subfield of FIX DAT, Fixup
+        F, 455
+        Frame, 456
+        P, 456
+        T, 456
+        TARGT, 456
+        subfield of Fixup
+        Frame Datum, conditional, 456
+        Target Datum, conditional, 456
+        Target Displacement, conditional, 456
+        subfield of LOCAT, Fixup
+        Data Record Offset, 455
+        LOC, 455
+        M (mode), 454
+        subfield of Thread
+        Index, conditional, 454
+        TRD DAT, 453
+        subfield of TRD DAT, Thread
+        D, 453
+        Method, 453
+        THRED, 454
+Fixup
+        segment-relative, 427, 431
+        self-relative, 427, 430
+        Target, 426
+Flush, 349
+Flush Buffer, Read Keyboard (Function 0CH), 78
+Force Duplicate File Handle (Function 46H), 224
+Format, 387
+FORTRAN, common blocks, 444
+FORTRAN language, 444
+FOVAL, definition, 431
+Frame Datum field, FIXUPP, 448
+Frame Datum subfield, Fixup
+        External Index, 456
+        Group Index, 456
+        Segment Index, 456
+Frame Datum subfield, START ADDRS, 458
+Frame Number, 431
+Frame Number, conditional, 439
+Frame Number, definition, 421
+Frame Number subfield, Public Base, 442
+Frame Number subfield, SEG ATTR, 439
+Frame
+        definition, 421
+        Frame Number, 431
+        nomenclature, 430
+        specifying, 429
+        specifying, FIXUPP, 454
+Frames
+        Thread Number, FIXUPP, 454
+Free Allocated Memory (Function 49H), 232
+Function, 114, 116, 119, 121, 123, 125, 127, 130, 133, 136, 138, 140, 142, 144, 146, 148, 150, 152, 154, 156, 158, 162, 164,
+        166, 168, 170, 172, 178, 180
+Function Requests
+        alphabetic order, 31
+        calling, 21
+Function requests
+        definition, 3
+Function Requests
+        definition, 21
+        device-related, 11
+        Directory-related, 12
+        directory-related, 12
+        file-related, 10
+        file-sharing, 11
+        Function 00H, 54
+        Function 01H, 56
+        Function 02H, 58
+        Function 03H, 60
+        Function 04H, 62
+        Function 05H, 64
+        Function 06H, 66
+        Function 07H, 68
+        Function 08H, 70
+        Function 09H, 72
+        Function 0AH, 74
+        Function 0BH, 76
+        Function 0CH, 78
+        Function 0DH, 80, 98
+        Function 0EH, 82
+        Function 0FH, 84
+        Function 10H, 87
+        Function 11H, 89
+        Function 12H, 92
+        Function 13H, 94
+        Function 14H, 96
+        Function 15H, 98
+        Function 16H, 100
+        Function 17H, 102
+        Function 19H, 104
+        Function 1AH, 106
+        Function 1BH, 108
+        Function 1CH, 111
+Function requests
+        Function 25H, 39, 40
+Function Requests
+        Function 25H, 41
+Function requests
+        Function 35H, 39, 40
+Function Requests
+        Function 40H, 182
+        Function 41H, 184
+        Function 42H, 186
+        Function 43H, 189
+        Function 44H, Code 08H, 201
+        Function 44H, Code 09H, 203
+        Function 44H, Code 0AH, 205
+        Function 44H, Code 0BH, 207
+        Function 44H, Code 0CH, 209
+        Function 44H, Code 0DH, 212
+        Function 44H, Codes 00H and 01H, 192
+        Function 44H, Codes 02H and 03H, 195
+        Function 44H, Codes 04H and 05H, 197
+        Function 44H, Codes 06H and 07H, 199
+        Function 44H, Codes 0EH and 0FH, 220
+        Function 45H, 221
+Function requests
+        Function 46H, 224
+Function Requests
+        Function 47H, 227
+        Function 48H, 229
+        Function 49H, 232
+        Function 4AH, 235
+        Function 4BH, Code 00H, 238
+        Function 4BH, Code 03H, 242
+        Function 4CH, 245
+        Function 4DH, 247
+        Function 4EH, 249
+        Function 4FH, 252
+        Function 54H, 254
+        Function 56H, 256
+        Function 57H, 259
+        Function 58H, 262
+        Function 59H, 265
+        Function 5AH, 269
+        Function 5BH, 273
+        Function 5CH, Code 00H, 275
+        Function 5CH, Code 01H, 280
+        Function 5EH, Code 00H, 283
+        Function 5EH, Code 02H, 285
+        Function 5FH, Code 02H, 287
+        Function 5FH, Code 03H, 290
+        Function 5FH, Code 04H, 294
+        Function 62H, 296
+        Function 65H, 298
+        Function 66H, 301
+        Function 67H, 303
+        Function 68H, 304
+        Handling errors, 22
+        memory management, 5
+        National Language Support, 15
+        Network-related, 14
+        network-related, 14
+        numeric order, 28
+        process management, 7
+        standard character I/O, 4
+        system-management, 15, 16
+Generic IOCtl for devices (Function 44H, Code 0DH), 212
+Generic IOCtl for handles (Function 44H, Code 0CH), 209
+Generic IOCtl Function, 349
+Get, 119, 136, 140, 146, 148, 154, 156, 158
+Get Assign List Entry (Function 5FH, Code 02H), 287
+Get Current Directory (Function 47H), 227
+Get Current Disk (Function 19H), 104
+Get Default Drive Data (Function 1BH), 108
+Get Drive Data (Function 1CH), 111
+Get Extended Country Information (Function 65H), 298
+Get Extended Error (Function 59H), 265
+Get Interrupt Vector (Function 35H), 39, 40
+Get Machine Name (Function 5EH, Code 00H), 283
+Get PSP (Function 62H), 296
+Get Return Code Child Process (Function 4DH), 247
+Get Verify State (Function 54H), 254
+Get/Set Allocation Strategy (Function 58H), 262
+Get/Set Date/Time of File (Function 57H), 259
+Get/Set File Attributes (Function 43H), 189
+Get/Set Global Code Page (Function 66H), 301
+Get/Set IOCtl Drive Map (Function 44H, Codes 0EH and 0FH), 220
+Get/Set Logical Drive Map Function, 350
+Group Component Descriptor field, GRPDEF, 441
+Group, definition, 421
+Group definition record. See GRPDEF record
+Group Definition Record (GRPDEF), 440
+Group Index, 428, 429, 430
+Group Index subfield, Line Number Base, 449
+Group Index subfield, Public Base, 442
+Group Name Index field, GRPDEF, 440
+GRPDEF record, 432
+        definition, 424
+        field
+        CHKSUM, 440
+        Group Component Descriptor, repeated, 440
+        Group Name Index, 440
+        Record Length, 440
+        RECTYP, 440
+        schematic, 440
+Handles
+        definition, 9
+        device, 9
+Handling errors, 22
+Header, 413
+hibyte, definition, 426
+Hidden files, 89, 92, 388
+High-Level Language, 21
+HUGE communal variable, 447
+IBM disk format, 392
+Index fields, 425
+Index Number, 427, 429
+Index subfield, Thread
+        External Index, 454
+        Group Index, 454
+        Segment Index, 454
+Index
+        definition, 425
+Indices, 425
+Indices, external, 448
+Init, 338
+INIT code, 334
+Installable device drivers, 328
+Instruction Pointer (IP), 401, 430
+Instruction
+        CALL, 427
+        JUMP, 427
+        SHORT-JUMP, 427
+Internal stack, 22, 355
+Interrupt entry point, 325, 326, 354
+Interrupt handlers, 21, 39, 40, 41
+Interrupt routines, 333
+Interrupt-handling, 123
+Interrupts
+        21H, 3
+        Address of handlers, 21
+        alphabetic order, 27
+        definition, 3
+        Interrupt 20H, 36, 54
+        Interrupt 21H, 38
+        Interrupt 22H, 39
+        Interrupt 23H, 40, 56, 58, 64, 70, 74
+        Interrupt 24H, 41
+        Interrupt 25H, 46
+        Interrupt 26H, 49
+        Interrupt 27H, 52
+        issuing, 21
+        numeric order, 27
+        programming hints, 465
+        Vector table, 21
+I/O Control for Devices (Function 44H), 332
+IOCtl, 11
+IOCtl bit, 332
+IOCtl Block (Function 44H, Codes 4 and 5), 197
+IOCtl Character (Function 44H, Codes 2 and 3), 195
+IOCtl Data (Function 44H, Codes 0 and 1), 192
+IOCtl Is Changeable (Function 44H, Code 08H), 201
+IOCtl Is Redirected Block (Function 44H, Code 09H), 203
+IOCtl Is Redirected Handle (Function 44H, Code 0AH), 205
+IOCtl Retry (Function 44H, Code 0BH), 207
+IOCtl Status (Function 44H, Codes 6 and 7), 199
+IP. See Instruction Pointer (IP)
+Iterated Data Block field, LIDATA, 451
+Iterated Data Offset field, LIDATA, 451
+JUMP instruction, 427
+Keep, 150
+Keyboard layouts, national, NLS, 15, 405
+Language
+        C, 444
+        FORTRAN, 444
+Leaf Descriptor subfield, Eight Leaf Descriptor
+        format
+        FAR variable, 461
+        NEAR variable, 461
+        subfield
+        NEAR, 461
+        VARTYP, 461
+LEDATA record
+        field
+        DAT, repeated, 451
+        Enumerated Data Offset, 450
+        Segment Index, 450
+        schematic, 450
+LEDATA
+        field
+        CHKSUM, 450
+        Record Length, 450
+        RECTYP, 450
+        purpose, 450
+Length fields, COMDEF, format, 445
+Length in Bits subfield, Leaf Descriptor, 461
+Length of Record Field, 335
+LHEADR record
+        field
+        CHKSUM, 435
+        L-module Name, 435
+        Record Length, 435
+        RECTYP, 435
+        schematic, 435
+LIDATA record
+        field
+        CHKSUM, 451
+        Iterated Data Block, repeated, 451
+        Iterated Data Offset, 451
+        Record Length, 451
+        RECTYP, 451
+        Segment Index, 451
+        purpose, 451
+        schematic, 451
+        subfield of Iterated Data Block
+        Block Count, 452
+        Content, 452
+        Repeat Count, 452
+Line Number Base field, LINNUM, 449
+Line number, binary, 450
+Line Number field, LINNUM, 450
+Line Number Offset field, LINNUM, 450
+Line Numbers Record (LINNUM), 449
+LINK, 413
+Linker, Microsoft, 419, 420, 422, 423, 424, 425, 431, 436, 438, 440, 442, 444, 446, 448, 450, 459
+Link-time semantics, 446, 462
+LINNUM record
+        field
+        CHKSUM, 449
+        Line Number Base, 449
+        Line Number Offset, repeated, 450
+        Line Number, repeated, 450
+        Record Length, 449
+        RECTYP, 449
+        purpose, 449
+        schematic, 449
+        subfield of Line Number Base
+        Group Index, 449
+        Segment Index, 449
+List of Names Record (LNAMES), 436
+L-module Header Record (LHEADR), 435
+L-module Name, 436
+LNAMES record, 432
+        field
+        CHKSUM, 436
+        Name, repeated, 436
+        Record Length, 436
+        RECTYP, 436
+        schematic, 436
+Load and Execute Program (Function 4BH, Code 00H), 238
+Load module, 413, 414
+Load Overlay (Function 4BH, Code 03H), 242
+Loadsize, 414
+lobyte, definition, 426
+Local Base field, LOCSYM, 447
+Local buffering, 329
+Local Name field, LOCSYM, 447
+Local Offset field, LOCSYM, 447
+Local symbol, 447, 448
+Local Symbols Record (LOCSYM), 447
+LOCAT subfield, Fixup
+        internal structure, 454
+        schematic, 454
+Location
+        types, 426
+        base, 426
+        hibyte, 426
+        lobyte, 426
+        offset, 426
+        pointer, 426
+Lock (Function 5CH, Code 00H), 275
+LOCSYM record
+        field, 447
+        CHKSUM, 447
+        Local Base, 447
+        Local Name, repeated, 447
+        Local Offset, repeated, 447
+        Record Length, 447
+        RECTYP, 447
+        Type Index, repeated, 447
+        order with respect to COMENT, 447
+        purpose, 447
+        schematic, 447
+Logical Enumerated Data Record (LEDATA), 450
+Logical Iterated Data Record (LIDATA), 451
+Logical sector, 390
+Logical sector numbers, 392
+Logical Segment. See LSEG
+LSEG
+        absolute
+        Combination attribute, 438
+        Alignment attribute
+        absolute segment, 437
+        relocatable segment, 437
+        canonic Frame, 429
+        Class name, 422
+        Combination attribute
+        absolute segment, 438
+        relocatable segment, 438
+        combining, 438
+        Complete name, 423
+        definition, 421
+        Overlay Name, 423
+        relocatable
+        byte-aligned, 437
+        Combination attribute, 438
+        page-aligned, 437
+        paragraph-aligned, 437
+        word-aligned, 437
+        Segment Name, 422
+Make Assign-List Entry (Function 5FH, Code 03H), 290
+Mapping
+        logical to physical starting address, 458
+MAS. See Memory Address Space (MAS)
+MATTR subfield, MOD TYP, 457
+Maxalloc, 414
+Media <Check, 340
+Media descriptor byte, 340, 351
+Media, determining, 353
+Memory address, 430
+Memory Address Space (MAS), 420, 439
+Memory control block, 5
+Memory image, 8086, 450
+Memory image, LSEGs in, 424
+Memory image, relocatable, 419
+Memory management function requests, 5
+Memory management, programming hints, 468
+Memory model
+        huge, 459
+        large, 459
+        medium, 459
+        small, 459
+Microprocessor
+        80186, 419
+        80286, 419
+        8086, 419
+Microsoft Extensions class, 447, 449
+Microsoft linker, 419, 420, 422, 423, 424, 425, 431, 436, 438, 440, 442, 444, 446, 448, 450, 459
+Microsoft Networks, 14, 467
+Microsoft Networks Manager's Guide, 14
+Microsoft Networks User's Guide, 14
+Minalloc, 414
+MOD TYP field, MODEND
+        MATTR subfield, 457
+        module attributes, 457
+Mode, address, 427
+Mode
+        fixup
+        segment-relative, 454
+        self-relative, 454
+MODEND record
+        field
+        CHKSUM, 457
+        MOD TYP, 457
+        Record Length, 457
+        RECTYP, 457
+        START ADDRS, conditional, 458
+        purpose, 457
+        schematic, 457
+        subfield of START ADDRS
+        Frame Datum, conditional, 458
+        Target Datum, conditional, 458
+        Target Displacement, conditional, 458
+Module, definition, 420
+Module End Record (MODEND), 457
+Module header record, definition, 423
+Module
+        record ordering in, 431
+Move File Pointer (Function 42H), 186
+MS-DOS, 8086 object language, 419
+MS-DOS initialization, 385
+MS-DOS memory map, 397
+MS-DOS User's Reference, 9
+Multitasking, 325
+Name field, 334
+Name field, SAMREC, 434
+Name Indices, 436
+National keyboard layouts, NLS, 15, 405
+National Language Support Function Requests, 15
+National Language Support (NLS)
+        restrictions, 405
+        unsupported features, 405
+National Language Support system calls, 406
+NEAR data segment, 445
+NEAR subfield, Leaf Descriptor, 461
+NEAR variable format, Leaf Descriptor, 461
+Network-related Function Requests, 14
+Network-related function requests, 14
+Non IBM format bit, 332
+Non-destructive Read No Wait, 346
+NUL device, 332
+Number field, SAMREC, 434
+Number of Elements subfield, Leaf Descriptor, 461
+Object language, 8086, 419
+Object Module Formats, 419
+Object Module Formats (OMF), 420
+Object module
+        restrictions, 420
+offset, definition, 426
+Offset subfield, SEG ATTR, 439
+Old system calls, 17
+OMF. See Object Module Formats (OMF)
+Open, 172
+Open File (Function 0FH), 84
+Opened FCB, 18
+Operating system
+        MS-DOS, 419
+        PC-DOS, 419
+        XENIX, 419
+Overlay Name, definition, 423
+Parameter block, 239
+Parse, 133
+Path command, 400
+PC-DOS, 8086 object language, 419
+Physical Segment. See PSEG
+Pointer to Next Device field, 330
+Predefined device handles, 9
+Print Character (Function 05H), 64
+Printer Setup (Function 5EH, Code 02H, 285
+Process management function requests, 7
+Process management, programming hints, 468
+Processor. See Microprocessor
+Program, 125
+Program End Process (Interrupt 20H), 36
+Program segment, 398
+Program Segment Prefix, 18, 21, 41, 239, 398, 399, 414
+Programming hints
+        device management, 467
+        file and directory management, 469
+        file locking, 470
+        interrupts, 465
+        memory management, 468
+        miscellaneous, 471
+        process management, 468
+        recommendations, 465
+        system calls, 466
+Programming interfaces, NLS, 15, 405
+Prompt command, 400
+Protected-mode
+        application Frame Number, 431
+PSEG
+        definition, 421
+PUBDEF record, 424, 429
+PUBDEF record. See also
+PUBDEF record
+        field
+        Public Base, repeated, 441
+        Public Name, repeated, 443
+        Public Offset, repeated, 443
+        Record Length, 441
+        RECTYP, 441
+        Type Index, repeated, 443
+        purpose, 441
+        schematic, 441
+        subfield of Public Base
+        Frame Number, conditional, 442
+        subfield, Public Base
+        Frame Number, conditional, 441
+        Group Index, 441
+        Segment Index, 441
+Public Base field, PUBDEF, 441
+Public Name field, PUBDEF, 443
+Public names definition record. See PUBDEF record
+Public Names Definition Record (PUBDEF), 441
+Public Offset field, PUBDEF, 443
+Public symbol, 442, 448
+Public variable, 444
+Random, 114, 116, 127, 130
+Read, 180
+Read Keyboard and Echo (Function 01H), 56
+Read Keyboard (Function 08H), 70
+Read Only Memory, 385
+Read or Write, 344
+Record format
+        abbreviation, 433
+        bitfields, 435
+        conditional field, 434
+        repeated field, 434
+Record formats, 419
+Record format
+        sample (SAMREC), 433
+        SAMREC (sample record)
+        CHKSUM field, 434
+        Name field, 434
+        Number field, 434
+        Record Length field, 434
+        SAMREC(sample record)
+        RECTYP field, 434
+        title, 433
+Record Length field, SAMREC, 434
+Record order
+        definition, 431
+        semantic rules, 431
+        syntax, 431
+Record Size, 98
+Record
+        COMDEF, 443, 462
+        COMENT, 458
+        comment, 432
+        Data, 432
+        EXTDEF, 432, 448, 462
+        FIXUP, 427
+        FIXUPP, 432, 452
+        GRPDEF, 424, 432, 440
+        LEDATA, 450
+        LHEADR, 435
+        LIDATA, 451
+        LINNUM, 449
+        LNAMES, 432, 436
+        LOCSYM, 447
+        MODEND, 457
+        PUBDEF, 429, 441, 462
+        RECTYP(record type), 433
+        SAMREC (sample record), 433
+        SEGDEF, 423, 432, 437
+        symbol definition
+        COMDEF, 424
+        EXTDEF, 424
+        PUBDEF, 424
+        THEADR, 435
+        TYPDEF, 462
+RECTYP(record type)field, 433
+Reference self-relative, 430
+Reference
+        segment-relative, 430
+References
+        WIRTH:CACM, Nov. 1977), 432
+Register
+        CS, 424
+        DS, 424
+        ES, 424
+Registers, treatment of, 22
+Register
+        SS, 424
+Relocatable memory image, 419
+Relocatable segment, LSEG, 437
+Relocation information, 413
+Relocation item offset value to a word in the load, 415
+Relocation table, 414
+Remove, 166
+Rename File (Function 17H), 102
+Repeat Count subfield, Iterated Data Block, 452
+request header, 334
+Request packet, 325
+Reset Disk (Function 0DH), 80, 98
+Resident device drivers, 325
+ROM, 385
+Root directory, 387
+SAMREC (sample record)
+        schematic, 433
+Search for First Entry (Function 11H), 89
+Search for Next Entry (Function 12H), 92
+Sector count, 354, 355
+SEG ATTR field, SEGDEF, 437
+SEGDEF record, 432
+        definition, 423
+        field
+        CHKSUM, 437
+        Class Name Index, 439
+        Overlay Name Index, 440
+        Record Length, 437
+        RECTYP, 437
+        SEG ATTR, 437
+        Segment Name Index, 439
+        schematic, 437
+        subfield of SEG ATTR
+        Alignment, 437
+        Big, 439
+        Combination, 438
+        Offset, conditional, 439
+SEGDEF recrod
+        field
+        Segment Length, 439
+Segment addressing, 424
+Segment definition record. See SEGDEF record
+Segment Definition Record (SEGDEF), 437
+Segment Index, 428, 429, 430, 437
+Segment Index field, LEDATA, 450
+Segment Index field, LIDATA, 451
+Segment Index subfield, Group Component Descriptor, 441
+Segment Index subfield, Line Number Base, 449
+Segment Index subfield, Public Base, 442
+Segment Length field, SEGDEF, 439
+Segment Name, definition, 422
+Segment Name Index field, SEGDEF, 439
+Segment
+        absolute, LSEG, 437, 439
+        attribute
+        Alignment, 437
+        Combination, 438
+        logical (LSEG), 421
+        physical (PSEG), 421
+Segment-relative fixup, 427, 431
+Segment-relative reference, 430
+Segment
+        relocatable, LSEG, 437
+Select Disk (Function 0EH), 82
+Self-relative fixup, 427, 430, 455
+Self-relative reference, 430
+Semantic rules, record ordering, 432
+Semantics, link-time, 446, 462
+Sequential Read (Function 14H), 96
+Sequential Write (Function 15H), 98
+Set, 121, 123, 138, 142, 162
+Set Block (Function 4AH), 235, 401
+Set command, 400
+Set Disk Transfer Address (Function 1AH), 106
+Set Handle Count(Function 67H), 303
+Set Interrupt Vector (Function 25H), 39, 40, 41
+Set/Reset, 144
+SHORT-JUMP instruction, 427
+SS register, 424
+Stack segment, SS, 424
+Standard character I/O function requests, 4
+START ADDRS field, MODEND
+        Format, 458
+Start sector, 354
+Start segment value the relocation item offset, 415
+static request header, 325
+Status, 348
+Status field, 336
+Strategy entry point, 325, 326, 354
+Strategy routines, 333
+Subfield OFFH, 441
+Subfield
+        Comment Type
+        Comment Class, 459
+        Eight Leaf Descriptor
+        EN, 461
+        Leaf Descriptor, 461
+        Fixup
+        Frame Datum, 456
+        Target Datum, 456
+        Target Displacement, 456
+        Frame Number, conditional, 441
+        Group Component Descriptor
+        Segment Index, 441
+        Iterated Data Block
+        Block Count, 452
+        Content, 452
+        Repeat Count, 452
+        Leaf Descriptor
+        Element Type Index, 461
+        FAR, 461
+        Length in Bits, 461
+        NEAR, 461
+        Number of Elements, 461
+        VAR SUBTYP, 461
+        VARTYP, 461
+        Line Number Base, LINNUM
+        Group Index, 449
+        Segment Index, 449
+        MOD TYP
+        MATTR, 457
+        Public Base
+        Group INdex, 441
+        SEG ATTR
+        Alignment, 437
+        Big, 439
+        Combination, 438
+        Segment Index, 441
+        START ADDRS
+        Frame Datum, 458
+        Target Datum, 458
+        Target Displacement, 458
+        Thread
+        Index, 454
+        TRD DAT, 453
+Superseded system calls, 17
+Symbol definition, 424
+Symbol definition record
+        COMDEF, 424
+        EXTDEF, 424
+        PUBDEF, 424
+Symbol
+        local, 447, 448
+        public, 442, 448
+Syntax, record ordering, 432
+Sysinit, 326
+System call
+        National Language Support
+        406
+System calls
+        definition, 3
+        programming hints, 466
+        replacements for old, 17
+System Calls
+        superseded calls, 3
+System calls
+        types of, 3
+System files, 89, 92, 388
+System prompt, 386
+System-management function requests, 15, 16
+Target Datum field, FIXUPP, 448
+Target Datum subfield, Fixup
+        External Index, 456
+        Group Index, 456
+        Segment Index, 456
+Target Datum subfield, START ADDRS, 458
+Target Displacement subfield, Fixup, 456
+Target Displacment subfield, START ADDRS, 458
+Target
+        definition, 427
+        nomenclature, 428
+        specification attribute, 456
+        specifying, 427
+        specifying, FIXUPP, 454
+        Thread Number, FIXUPP, 454
+Terminate But Stay Resident (Interrupt 27H), 52
+Terminate Process Exit Address (Interrupt 22H), 39
+Terminate Program (Function 00H), 54
+THEADR record
+        field
+        CHKSUM, 435
+        Record Length, 435
+        RECTYP, 435
+        T-module Name, 435
+        schematic, 435
+Thread Data subfield. See TRD DAT subfield, Thread
+Thread field, FIXUPP
+        data type
+        Frame, 453
+        Target, 453
+        definition, 453
+Thread Number, THRED, 454
+T-module, definition, 420
+T-module Header Record (THEADR), 435
+T-Module Name, 435
+Transfer address, 354
+TRD DAT subfield, Thread
+        D subfield, 453
+        internal structure, 453
+        Method subfield, 453
+        schematic, 453
+        THRED subfield, 453
+TYPDEF record
+        communal variable, 460
+        field
+        CHKSUM, 460
+        Eight Leaf Descriptor, 461
+        Record Length, 460
+        RECTYP, 460
+        subfield of Eight Leaf Descriptor
+        EN, 461
+        subfield of Leaf Descriptor
+        Element Type Index, 461
+        FAR, 461
+        Length in Bits, 461
+        NEAR, 461
+        Number of Elements, 461
+        VAR SUBTYP, optional, 461
+        VARTYP, 461
+Type Index field, COMDEF, 444
+Type Index field, EXTDEF, 449
+Type Index field, LOCSYM, 447
+Type Index field, PUBDEF, 443
+Type-ahead buffer, 349
+Unit code field, 335
+Unlock (Function 5CH, Code 01H), 280
+Unopened FCB, 18
+User Stack, 42
+User stack, 398
+Utility commands, NLS, 15, 405
+VAR SUBTYP subfield, Leaf Descriptor, 461
+Variable
+        communal, 444, 460
+        FAR, 446
+        HUGE", 447
+        NEAR, 446
+        public, 444
+VARTYP subfield, Leaf Descriptor
+        ARRAY, 461
+        SCALAR, 461
+        STRUCT, 461
+Vector table, 21
+Volume ID, 343
+Volume label, 388
+Wildcard, 134
+Wildcard characters, 89, 92
+Write Handle (Function 40H), 182
+XENIX, 8086 object language, 419
+
+
+
+_ _  |  |  _ _
+
+         Index
+
+
+         
+
+_ _  |  |  _ _
+
+

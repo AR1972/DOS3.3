@@ -1,0 +1,3520 @@
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Random Read (Function 21H)
+
+ Call:
+
+ AH = 21H
+ DS:DX
+  Pointer to opened FCB
+
+ Return:
+
+ AL
+  0 = Read completed successfully
+  1 = End of file, record empty
+  2 = DTA too small
+  3 = End of file, partial record
+
+
+
+Comments:
+
+Function 21H reads (into the Disk Transfer Address) the record pointed to
+by the Relative Record field (offset 20H) of the FCB. DX must contain the
+offset (from the segment address in DS) of an opened FCB. The Current
+Block field (offset 0CH) and Current Record field (offset 1FH) are set to
+agree with the Relative Record field (offset 20H). The record is then loaded
+at the Disk Transfer Address. The record length is taken from the Record
+Size field (offset 0EH) of the FCB.
+
+AL returns a code that describes the processing:
+
+Code
+ Meaning
+_ ________________________________________________________________
+
+0 Read completed successfully
+
+1 End-of-file; no data in the record
+
+2 Not enough room at the Disk Transfer Address to read one record;
+ read canceled
+
+3 End-of-file; a partial record was read and padded to the record
+ length with zeros
+
+
+
+  1
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Macro Definition:
+
+
+read_ran macro fcb
+  mov dx,offset fcb
+  mov ah,21H
+  int 21H
+  endm
+
+
+Example:
+
+The following program prompts for a letter, converts it to its alphabetic
+sequence (A = 1, B = 2, etc.), then reads and displays the corresponding
+record from a file named alphabet.dat that is on the disk in drive B. The
+file contains 26 records, each 28 bytes long.
+
+record_size equ 0EH ;offset of Record Size
+ ;field of FCB
+relative_record equ 21H ;offset of Relative Record
+; field of FCB
+fcb db 2,"ALPHABETDAT"
+ db 26 dup (?)
+buffer db 28 dup(?),"$"
+prompt db "Enter letter: $"
+crlf db 0DH,0AH,"$"
+;
+begin: set_dta buffer ;see Function 1AH
+ open fcb ;see Function 0FH
+ mov fcb[record_size],28 ;set record size
+get_char: display prompt ;see Function 09H
+ read_kbd_and_echo ;see Function 01H
+ cmp al,0DH ;just a CR?
+ je all_done ;yes, go home
+ sub al,41H ;convert ASCII code
+ ;to record #
+ mov fcb[relative_record],al ;set relative
+ ;record
+ display crlf ;see Function 09H
+ read_ran fcb ;THIS FUNCTION
+ display buffer ;see Function 09H
+ display crlf ;see Function 09H
+ jmp get_char ;get another char.
+all_done: close fcb ;see Function 10H
+
+
+
+2
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Random Write (Function 22H)
+
+ Call:
+
+ AH = 22H
+ DS:DX
+  Pointer to opened FCB
+
+ Return:
+
+ AL
+  00H = Write completed successfully
+  01H = Disk full
+  02H = DTA too small
+
+
+
+Comments:
+
+Function 22H writes (from the Disk Transfer Address) the record pointed
+to by the Relative Record field (offset 20H) of the FCB. DX must contain
+the offset from the segment address in DS of an opened FCB. The Current
+Block (offset 0CH) and Current Record (offset 1FH) fields are set to agree
+with the Relative Record field (offset 20H). This record is then written
+from the Disk Transfer Address.
+
+The record length is taken from the Record Size field (offset 0EH) of the
+FCB. If the record size is less than a sector, the data at the Disk Transfer
+Address is written to a buffer, the buffer is written to disk when it contains
+a full sector of data; or when a program closes the file, or when it issues
+Function 0DH (Reset Disk).
+
+AL returns a code that describes the processing:
+
+Code
+ Meaning
+_ ________________________________________________________________
+
+0 Write completed successfully
+
+1 Disk is full
+
+2 Not enough room at the Disk Transfer Address to write one record;
+ write canceled
+
+
+
+  3
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Macro Definition:
+
+
+write_ran macro fcb
+  mov dx,offset fcb
+  mov ah,22H
+  int 21H
+  endm
+
+
+Example:
+
+The following program prompts for a letter, converts it to its alphabetic
+sequence (A = 1, B = 2, etc.), then reads and displays the corresponding
+record from a file named alphabet.dat that is on the disk in drive B. After
+displaying the record, it prompts you to enter a changed record. If you
+type a new record, it is written to the file, but if you just press the RETURN
+key, the record is not replaced. The file contains 26 records, each 28 bytes
+long.
+
+record_size equ 0EH ;offset of Record Size
+ ;field of FCB
+relative_record equ 21H ;offset of Relative Record
+; field of FCB
+fcb db 2,"ALPHABETDAT"
+ db 26 dup (?)
+buffer db 28 dup(?),0DH,0AH,"$"
+prompt1 db "Enter letter: $"
+prompt2 db "New record (RETURN for no change): $"
+crlf db 0DH,0AH,"$"
+reply db 28 dup (32)
+blanks db 26 dup (32)
+;
+begin: set_dta buffer ;see Function 1AH
+ open fcb ;see Function 0FH
+ mov fcb[record_size],28 ;set record size
+get_char: display prompt1 ;see Function 09H
+ read_kbd_and_echo ;see Function 01H
+ cmp al,0DH ;just a carriage return?
+ je all_done ;yes, go home
+ sub al,41H ;convert ASCII
+ ;code to record #
+ mov fcb[relative_record],al
+ ;set relative record
+ display crlf ;see Function 09H
+ read_ran fcb ;THIS FUNCTION
+ display buffer ;see Function 09H
+ display crlf ;see Function 09H
+ display prompt2 ;see Function 09H
+ get_string 27,reply ;see Function 0AH
+ display crlf ;see Function 09H
+ cmp reply[1],0 ;was anything typed
+ ;besides CR?
+ je get_char ;no
+ ;get another char.
+
+4
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+ xor bx,bx ;to load a byte
+ mov bl,reply[1] ;use reply length as
+ ;counter
+ move_string blanks,buffer,26 ;see chapter end
+ move_string reply[2],buffer,bx ;see chapter end
+ write_ran fcb ;THIS FUNCTION
+ jmp get_char ;get another character
+all_done: close fcb ;see Function 10H
+
+
+
+  5
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Get File Size (Function 23H)
+
+ Call:
+
+ AH = 23H
+ DS:DX
+  Pointer to unopened FCB
+
+ Return:
+
+ AL
+  00H = Directory entry found
+  FFH = No directory entry found
+
+
+
+Comments:
+
+Function 23H returns the size of a specified file. DX must contain the
+offset (from the segment address in DS) of an unopened FCB.
+
+If there is a directory entry that matches the specified file, MS-DOS divides
+the File Size field (offset 1CH) of the directory entry by the Record Size
+field (offset 0EH) of the FCB, puts the result in the Relative Record field
+(offset 20H) of the FCB, and returns 00 in AL.
+
+You must set the Record Size field of the FCB to the correct value before
+calling this function. If the Record Size field is not an even divisor of the
+File Size field, the value set in the Relative Record field is rounded up,
+yielding a value larger than the actual number of records.
+
+If this call does not find a matching directory, AL returns FFH.
+
+Macro Definition:
+
+
+file_size macro fcb
+  mov dx,offset fcb
+  mov ah,23H
+  int 21H
+  endm
+
+
+
+6
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Example:
+
+The following program prompts for the name of a file, opens the file to fill
+in the Record Size field of the FCB, issues a File Size system call, and
+displays the record length and number of records.
+
+fcb db 37 dup (?)
+prompt db "File name: $"
+msg1 db "Record length: ",0DH,0AH,"$"
+msg2 db "Records: ",0DH,0AH,"$"
+crlf db 0DH,0AH,"$"
+reply db 17 dup(?)
+;
+begin: display prompt ;see Function 09H
+ get_string 17,reply ;see Function 0AH
+ cmp reply[1],0 ;just a CR?
+ jne get_length ;no, keep going
+ jmp all_done ;yes, go home
+get_length: display crlf ;see Function 09H
+ parse reply[2],fcb ;see Function 29H
+ open fcb ;see Function 0FH
+ file_size fcb ;THIS FUNCTION
+ mov ax,word ptr fcb[33] ;get record length
+ convert ax,10,msg2[9] ;see end of chapter
+ mov ax,word ptr fcb[14] ; get record number
+ convert ax,10,msg1[15] ;see end of chapter
+ display msg1 ;see Function 09H
+ display msg2 ;see Function 09H
+all_done: close fcb ;see Function 10H
+
+
+
+  7
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Set Relative Record (Function 24H)
+
+ Call:
+
+ AH = 24H
+ DS:DX
+  Pointer to opened FCB
+
+ Return:
+
+ None
+
+
+
+Comments:
+
+Function 24H sets the Relative Record field (offset 20H) to the file address
+specified by the Current Block field (offset 0CH) and Current Record field
+(offset 1FH). DX must contain the offset (from the segment address in DS)
+of an opened FCB. You use this call to set the file pointer before a Ran-
+dom Read or Write (Functions 21H, 22H, 27H, or 28H).
+
+Macro Definition:
+
+
+set_relative_record macro fcb
+   mov dx,offset fcb
+   mov ah,24H
+   int 21H
+   endm
+
+
+Example:
+
+The following program copies a file using the Random Block Read and
+Random Block Write system calls. It speeds the copy by setting the record
+length equal to the file size and the record count to 1, and by using a
+buffer of 32K bytes. It positions the file pointer by setting the Current
+Record field (offset 1FH) to 1 and using Function 24H (Set Relative
+Record) to make the Relative Record field (offset 20H) point to the same
+record that the combination of the Current Block field (offset 0CH) and
+
+8
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+Current Record field (offset 1FH) points to.
+
+current_record equ 20H ;offset of Current Record
+ ;field of FCB
+fil_size equ 10H ;offset of File Size
+; field of FCB
+fcb db 37 dup (?)
+filename db 17 dup(?)
+prompt1 db "File to copy: $" ;see Function 09H for
+prompt2 db "Name of copy: $" ;explanation of $
+crlf db 0DH,0AH,"$"
+file_length dw ?
+buffer db 32767 dup(?)
+;
+begin: set_dta buffer ;see Function 1AH
+ display prompt1 ;see Function 09H
+ get_string 15,filename ;see Function 0AH
+ display crlf ;see Function 09H
+ parse filename[2],fcb ;see Function 29H
+ open fcb ;see Function 0FH
+ mov fcb[current_record],0 ;set Current Record
+ ;field
+ set_relative_record fcb ;THIS FUNCTION
+ mov ax,word ptr fcb[fil_size] ;get file size
+ mov file_length,ax ;save it for
+ ;ran_block_write
+ ran_block_read fcb,1,ax ;see Function 27H
+ display prompt2 ;see Function 09H
+ get_string 15,filename ;see Function 0AH
+ display crlf ;see Function 09H
+ parse filename[2],fcb ;see Function 29H
+ create fcb ;see Function 16H
+ mov fcb[current_record],0 ;set Current Record
+ ;field
+ set_relative_record fcb ;THIS FUNCTION
+ mov ax,file_length ;get original file
+ ran_block_write fcb,1,ax ;see Function 28H
+ close fcb ;see Function 10H
+
+
+
+  9
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Set Interrupt Vector (Function 25H)
+
+ Call:
+
+ AH = 25H
+ AL
+  Interrupt number
+ DS:DX
+  Pointer to interrupt-handling
+  routine
+
+ Return:
+
+ None
+
+
+
+Comments:
+
+Function 25H sets the address in the interrupt vector table for the
+specified interrupt.
+
+AL must contain the number of the interrupt. DX must contain the offset
+(to the segment address in DS) of the interrupt-handling routine.
+
+To avoid compatibility problems, programs should never set an interrupt
+vector directly and should never use Interrupt 25H to read directly from
+memory. To get a vector, use Function 35H (Get Interrupt Vector), and to
+set a vector, use Function 25H, unless your program must be compatible
+with MS-DOS versions earlier than 2.0.
+
+Macro Definition:
+
+
+set_vector macro interrupt,handler_start
+ mov al,interrupt
+ mov dx,offset handler_start
+ mov ah,25H
+ endm
+
+
+
+10
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Example:
+
+Because interrupts tend to be machine-specific, no example is shown.
+
+
+  11
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Create New PSP (Function 26H)
+
+ Call:
+
+ AH = 26H
+ DX
+  Segment address of new PSP
+
+ Return:
+
+ None
+
+
+
+Comments:
+
+This function request has been superseded. Use Function 4BH (Load and
+Execute Program) to run a child process, unless your program must be
+compatible with MS-DOS versions earlier than 2.0.
+
+Function 26H creates a new Program Segment Prefix. DX must contain the
+segment address where the new PSP is to be created.
+
+Macro Definition:
+
+
+create_psp macro seg_addr
+  mov dx,seg_addr
+  mov ah,26H
+  endm
+
+
+Example:
+
+Because Function 4BH (Load and Execute Program) and 4B03H (Load
+Overlay) have superseded this function request, no example is shown.
+
+
+12
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Random Block Read (Function 27H)
+
+ Call:
+
+ AH = 27H
+ DS:DX
+  Pointer to opened FCB
+ CX
+  Number of blocks to read
+
+ Return:
+
+ AL
+  0 = Read completed successfully
+  1 = End of file, empty record
+  2 = DTA too small
+  3 = End of file, partial record
+ CX
+  Number of blocks read
+
+
+
+Comments:
+
+Function 27H reads one or more records from a specified file to the Disk
+Transfer Address. DX must contain the offset (to the segment address in
+DS) of an opened FCB. CX must contain the number of records to read.
+Reading starts at the record specified by the Relative Record field (offset
+20H); you must set this field with Function 24H (Set Relative Record)
+before calling this function.
+
+DOS calculates the number of bytes to read by multiplying the value in
+CX by the Record Size field (offset 0EH) of the FCB.
+
+CX returns the number of records read. The Current Block field (offset
+0CH), Current Record field (offset 1FH), and Relative Record field (offset
+20H) are set to address the next record.
+
+If you call this function with CX=0, no records are read.
+
+AL returns a code that describes the processing:
+
+Code
+ Meaning
+_ ________________________________________________________________
+
+0 Read completed successfully
+
+
+
+  13
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+1 End-of-file; no data in the record
+
+2 Not enough room at the Disk Transfer Address to read one record;
+ read canceled
+
+3 End-of-file; a partial record was read and padded to the record
+ length with zeros
+
+
+Macro Definition:
+
+
+ran_block_read macro fcb,count,rec_size
+ mov dx,offset fcb
+ mov cx,count
+ mov word ptr fcb[14],rec_size
+ mov ah,27H
+ int 21H
+ endm
+
+
+Example:
+
+The following program copies a file by using Function 27H (Random Block
+Read). This program speeds the copy process by specifying a record count
+of 1 and a record length equal to the file size, and by using a buffer of 32K
+bytes; the file is read as a single record (compare to the sample program
+for Function 28H that specifies a record length of 1 and a record count
+equal to the file size).
+
+current_record equ 20H ;offset of Current Record field
+fil_size equ 10H ;offset of File Size field
+;
+fcb db 37 dup (?)
+filename db 17 dup(?)
+prompt1 db "File to copy: $" ;see Function 09H for
+prompt2 db "Name of copy: $" ;explanation of $
+crlf db 0DH,0AH,"$"
+file_length dw ?
+buffer db 32767 dup(?)
+;
+begin: set_dta buffer ;see Function 1AH
+ display prompt1 ;see Function 09H
+ get_string 15,filename ;see Function 0AH
+ display crlf ;see Function 09H
+ parse filename[2],fcb ;see Function 29H
+ open fcb ;see Function 0FH
+ mov fcb[current_record],0 ;set Current
+ ;Record field
+ set_relative_record fcb ;see Function 24H
+ mov ax, word ptr fcb[fil_size]
+ ;get file size
+ mov file_length,ax ;save it
+ ran_block_read fcb,1,ax ;THIS FUNCTION
+ display prompt2 ;see Function 09H
+
+14
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+ get_string 15,filename ;see Function 0AH
+ display crlf ;see Function 09H
+ parse filename[2],fcb ;see Function 29H
+ create fcb ;see Function 16H
+ mov fcb[current_record],0;set current
+ ;Record field
+ set_relative_record fcb ;see Function 24H
+ ran_block_write fcb,1,ax ;see Function 28H
+ close fcb ;see Function 10H
+
+
+
+  15
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Random Block Write (Function 28H)
+
+ Call:
+
+ AH = 28H
+ DS:DX
+  Pointer to opened FCB
+ CX
+  Number of blocks to write
+  (0 = set File Size field)
+
+ Return:
+
+ AL
+  00H = Write completed successfully
+  01H = Disk full
+  02H = End of segment
+ CX
+  Number of blocks written
+
+
+
+Comments:
+
+Function 28H writes one or more records to a specified file from the Disk
+Transfer Address. DX must contain the offset (to the segment address in
+DS) of an opened FCB; CX must contain either the number of records to
+write or 0.
+
+If CX is not 0, the specified number of records is written to the file, start-
+ing at the record specified in the Relative Record field (offset 20H) of the
+FCB. If CX is 0, no records are written, but MS-DOS sets the File Size
+field (offset 1CH) of the directory entry to the value in the Relative Record
+field (offset 20H) of the FCB. To satisfy this new file size, disk allocation
+units are allocated or released, as required.
+
+MS-DOS calculates the number of bytes to write by multiplying the value
+in CX by the Record Size field (offset 0EH) of the FCB. CX returns the
+number of records written; the Current Block field (offset 0CH), Current
+Record field (offset 1FH), and Relative Record (offset 20H) field are set to
+address the next record.
+
+AL returns a code that describes the processing:
+
+Code
+ Meaning
+_ ________________________________________________________________
+
+
+
+16
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+0 Write completed successfully
+
+1 Disk full. No records written
+
+2 Not enough room at the Disk Transfer Address to write one record;
+ write canceled
+
+
+Macro Definition:
+
+
+ran_block_write macro fcb,count,rec_size
+ mov dx,offset fcb
+ mov cx,count
+ mov word ptr fcb[14],rec_size
+ mov ah,28H
+ int 21H
+ endm
+
+
+Example:
+
+The following program copies a file using Function 27H (Random Block
+Read) and Function 28H (Random Block Write). This program speeds the
+copy process by specifying a record count equal to the file size and a record
+length of 1, and by using a buffer of 32K bytes; the file is copied quickly
+with one disk access each to read and write (compare to the sample pro-
+gram of Function 27H, which specifies a record count of 1 and a record
+length equal to file size).
+
+current_record equ 20H ;offset of Current Record field
+fil_size equ 10H ;offset of File Size field
+;
+fcb db 37 dup (?)
+filename db 17 dup(?)
+prompt1 db "File to copy: $" ;see Function 09H for
+prompt2 db "Name of copy: $" ;explanation of $
+crlf db 0DH,0AH,"$"
+num_recs dw ?
+buffer db 32767 dup(?)
+;
+begin: set_dta buffer ;see Function 1AH
+ display prompt1 ;see Function 09H
+ get_string 15,filename ;see Function 0AH
+ display crlf ;see Function 09H
+ parse filename[2],fcb ;see Function 29H
+ open fcb ;see Function 0FH
+ mov fcb[current_record],0;set Current
+ Record field
+ set_relative_record fcb ;see Function 24H
+ mov ax, word ptr fcb[fil_size]
+ ;get file size
+ mov num_recs,ax ;save it
+ ran_block_read fcb,num_recs,1 ;THIS FUNCTION
+ display prompt2 ;see Function 09H
+
+  17
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+ get_string 15,filename ;see Function 0AH
+ display crlf ;see Function 09H
+ parse filename[2],fcb ;see Function 29H
+ create fcb ;see Function 16H
+ mov fcb[current_record],0 ;set Current
+ ;Record field
+ set_relative_record fcb ;see Function 24H
+ ran_block_write fcb,num_recs,1 ;see Function 28H
+ close fcb ;see Function 10H
+
+
+
+18
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Parse File Name (Function 29H)
+
+ Call:
+
+ AH = 29H
+ AL
+  Controls parsing (see text)
+ DS:SI
+  Pointer to string to parse
+ ES:DI
+  Pointer to buffer for unopened FCB
+
+ Return:
+
+ AL
+  00H = No wildcard characters
+  01H = Wildcard characters used
+  FFH = Drive letter invalid
+ DS:SI
+  Pointer to first byte past
+  string that was parsed
+ ES:DI
+  Pointer to unopened FCB
+
+
+Comments:
+
+Function 29H parses a string for a filename of the form
+drive:filename.extension. SI must contain the offset (to the segment
+address in DS) of the string to parse; DI must contain the offset (to the
+segment address in ES) of an area of memory large enough to hold an uno-
+pened FCB. If the string contains a valid filename, this call creates a
+corresponding unopened FCB at ES:DI.
+
+AL controls the parsing. Bits 4-7 must be 0; bits 0-3 have the following
+meaning:
+
+
+Table 0.1
+
+Bit values for Function 29H
+
+_ _________________________________________________________________________
+
+Bit  Value  Meaning 
+
+_ _________________________________________________________________________
+
+ 0   0  Stop parsing if a file separator is encountered. 
+
+    1  Ignore leading separators. 
+
+ 1   0   
+
+ Set the drive number in the FCB to 0 (current drive) if the string
+ does not contain a drive number.
+
+
+
+  19
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+    1   
+
+ Leave the drive number in the FCB unchanged if the string does
+ not contain a drive number.
+
+ 2   0   
+
+ Set the filename in the FCB to eight blanks if the string does not
+ contain a filename.
+
+    1   
+
+ Leave the filename in the FCB unchanged if the string does not
+ contain a filename.
+
+ 3   1   
+
+ Leave the extension in the FCB unchanged if the string does not
+ contain an extension.
+
+    0   
+
+ Set the extension in the FCB to three blanks if the string does not
+ contain an extension.
+
+_ _________________________________________________________________________
+
+If the string contains a filename or extension that includes an asterisk (*),
+all remaining characters in the name or extension are set to question
+marks (?).
+
+Filename separators:
+
+ : ; . , = + / " [ ] \ < > | space tab
+
+Filename terminators include all the filename separators, plus any control
+character. A filename cannot contain a filename terminator, since if the
+call encounters one, parsing stops.
+
+If the string contains a valid filename:
+
+ o AL returns 1 if the filename or extension contains a wildcard char-
+ acter (* or ?); AL returns 0 if neither the filename nor extension
+ contains a wildcard character.
+
+ o DS:SI points to the first character following the parsed string.
+
+ o ES:DI points to the first byte of the unopened FCB.
+
+If the drive letter is invalid, AL returns FFH. If the string does not contain
+a valid filename, ES:DI+1 points to a blank.
+
+Macro Definition:
+
+
+parse macro string,fcb
+ mov si,offset string
+ mov di,offset fcb
+ push es
+ push ds
+ pop es
+ mov al,0FH ;bits 0-3 on
+ mov ah,29H
+ int 21H
+
+20
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+ pop es
+ endm
+
+
+Example:
+
+The following program verifies the existence of the file named in reply to
+the prompt.
+
+fcb db 37 dup (?)
+prompt db "Filename: $"
+reply db 17 dup(?)
+yes db "File exists",0DH,0AH,"$"
+no db "File does not exist",0DH,0AH,"$"
+ crlf db 0DH,0AH,"$"
+;
+begin: display prompt ;see Function 09H
+ get_string 15,reply ;see Function 0AH
+ parse reply[2],fcb ;THIS FUNCTION
+ display crlf ;see Function 09H
+ search_first fcb ;see Function 11H
+ cmp al,0FFH ;dir. entry found?
+ je not_there ;no
+ display yes ;see Function 09H
+ jmp return
+not_there: display no
+
+
+
+  21
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Get Date (Function 2AH)
+
+ Call:
+
+ AH = 2AH
+
+ Return:
+
+ CX
+  Year (1980-2099)
+ DH
+  Month (1-12)
+ DL
+  Day (1-31)
+ AL
+  Day of week (0=Sun., 6=Sat.)
+
+
+
+Comments:
+
+Function 2AH returns the current date set in the operating system as
+binary numbers in CX and DX:
+
+Register
+ Contents
+_ ________________________________________________________________
+
+CX Year (1980-2099)
+
+DH Month (1=January, 2=February, etc.)
+
+DL Day of month (1-31)
+
+AL Day of week (0=Sunday, 1=Monday, etc.)
+
+
+Macro Definition:
+
+
+get_date macro
+  mov ah,2AH
+  int 21H
+  endm
+
+
+
+22
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Example:
+
+The following program gets the date, increments the day, increments the
+month or year, if necessary, and sets the new date.
+
+month db 31,28,31,30,31,30,31,31,30,31,30,31
+;
+begin: get_date ;THIS FUNCTION
+ inc dl ;increment day
+ xor bx,bx ;so BL can be used as index
+ mov bl,dh ;move month to index register
+ dec bx ;month table starts with 0
+ cmp dl,month[bx] ;past end of month?
+ jle month_ok ;no, set new date
+ mov dl,1 ;yes, set day to 1
+ inc dh ;and increment month
+ cmp dh,12 ;past end of year?
+ jle month_ok ;no, set new date
+ mov dh,1 ;yes, set month to 1
+ inc cx ;increment year
+month_ok: set_date cx,dh,dl ;see Function 2AH
+
+
+
+  23
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Set Date (Function 2BH)
+
+ Call:
+
+ AH = 2BH
+ CX
+  Year (1980-2099)
+ DH
+  Month (1-12)
+ DL
+  Day (1-31)
+
+ Return:
+
+ AL
+  00H = Date was valid
+  FFH = Date was invalid
+
+
+
+Comments:
+
+Function 2BH sets the date in the operating system (and in the CMOS
+clock, if one exists). Registers CX and DX must contain a valid date in
+binary:
+
+Register
+ Contents
+_ ________________________________________________________________
+
+CX Year (1980-2099)
+
+DH Month (1=January, 2=February, etc.)
+
+DL Day of month (1-31)
+
+If the date is valid, the call sets it and AL returns 0. If the date is not
+valid, the function aborts and AL returns FFH.
+
+Macro Definition:
+
+
+set_date macro year,month,day
+  mov cx,year
+  mov dh,month
+  mov dl,day
+  mov ah,2BH
+  int 21H
+  endm
+
+
+24
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Example:
+
+The following program gets the date, increments the day, increments the
+month or year, if necessary, and sets the new date.
+
+month db 31,28,31,30,31,30,31,31,30,31,30,31
+;
+begin: get_date ;see Function 2AH
+ inc dl ;increment day
+ xor bx,bx ;so BL can be used as index
+ mov bl,dh ;move month to index register
+ dec bx ;month table starts with 0
+ cmp dl,month[bx] ;past end of month?
+ jle month_ok ;no, set the new date
+ mov dl,1 ;yes, set day to 1
+ inc dh ;and increment month
+ cmp dh,12 ;past end of year?
+ jle month_ok ;no, set the new date
+ mov dh,1 ;yes, set the month to 1
+ inc cx ;increment year
+month_ok: set_date cx,dh,dl ;THIS FUNCTION
+
+
+
+  25
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Get Time (Function 2CH)
+
+ Call:
+
+ AH = 2CH
+
+ Return:
+
+ CH
+  Hour (0-23)
+ CL
+  Minutes (0-59)
+ DH
+  Seconds (0-59)
+ DL
+  Hundredths (0-99)
+
+
+
+Comments:
+
+Function 2CH returns the current time set in the operating system (and
+sets the CMOS clock, if one exists) as binary numbers in CX and DX:
+
+Register
+ Contents
+_ ________________________________________________________________
+
+CH Hour (0-23)
+
+CL Minutes (0-59)
+
+DH Seconds (0-59)
+
+DL Hundredths of a second (0-99)
+
+Depending on how your hardware keeps time, some of these fields may be
+irrelevant. As an example, many CMOS clock chips do not resolve more
+than seconds. In such a case, the value in DL will probably always be 0.
+
+Macro Definition:
+
+
+get_time macro
+  mov ah,2CH
+  int 21H
+  endm
+
+
+
+26
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Example:
+
+The following program displays the time continuously until you press any
+key.
+
+time db "00:00:00.00",0DH,"$"
+;
+begin: get_time ;THIS FUNCTION
+ byte_to_dec ch,time ;see end of chapter
+ byte_to_dec cl,time[3] ;see end of chapter
+ byte_to_dec dh,time[6] ;see end of chapter
+ byte_to_dec dl,time[9] ;see end of chapter
+ display time ;see Function 09H
+ check_kbd_status ;see Function 0BH
+ cmp al,0FFH ;has a key been pressed?
+ je return ;yes, terminate
+ jmp begin ;no, display time
+
+
+
+  27
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Set Time (Function 2DH)
+
+ Call:
+
+ AH = 2DH
+ CH
+  Hour (0-23)
+ CL
+  Minutes (0-59)
+ DH
+  Seconds (0-59)
+ DL
+  Hundredths (0-99)
+
+ Return:
+
+ AL
+  00H = Time was valid
+  FFH = Time was invalid
+
+
+
+Comments:
+
+Function 2DH sets the time in the operating system. Registers CX and DX
+must contain a valid time in binary:
+
+Register
+ Contents
+_ ________________________________________________________________
+
+CH Hour (0-23)
+
+CL Minutes (0-59)
+
+DH Seconds (0-59)
+
+DL Hundredths of a second (0-99)
+
+Depending on how your hardware keeps time, some of these fields may be
+irrelevant. As an example, many CMOS clock chips do not resolve more
+than seconds. In such a case, the value in DL will not be relevant.
+
+If the time is valid, the call sets it and AL returns 0. If the time is not
+valid, the function aborts and AL returns FFH.
+
+
+28
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Macro Definition:
+
+
+set_time macro hour,minutes,seconds,hundredths
+  mov ch,hour
+  mov cl,minutes
+  mov dh,seconds
+  mov dl,hundredths
+  mov ah,2DH
+  int 21H
+  endm
+
+
+Example:
+
+The following program sets the system clock to 0 and displays the time
+continuously. When you type a character, the display freezes; when you
+type another character, the clock is reset to 0 and the display starts again.
+
+time db "00:00:00.00",0DH,0AH,"$"
+;
+begin: set_time 0,0,0,0 ;THIS FUNCTION
+read_clock: get_time ;see Function 2CH
+ byte_to_dec ch,time ;see end of chapter
+ byte_to_dec cl,time[3] ;see end of chapter
+ byte_to_dec dh,time[6] ;see end of chapter
+ byte_to_dec dl,time[9] ;see end of chapter
+ display time ;see Function 09H
+ dir_console_io 0FFH ;see Function 06H
+ cmp al,00H ;was a char. typed?
+ jne stop ;yes, stop the timer
+ jmp read_clock ;no keep timer on
+stop: read_kbd ;see Function 08H
+ jmp begin ;keep displaying time
+
+
+
+  29
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Set/Reset Verify Flag (Function 2EH)
+
+ Call:
+
+ AH = 2EH
+ AL
+  0 = Do not verify
+  1 = Verify
+
+ Return:
+
+ None
+
+
+
+Comments:
+
+Function 2EH tells MS-DOS whether to verify each disk write. If AL is 1,
+verify is on; if AL is 0, verify is off. MS-DOS checks this flag each time it
+writes to a disk.
+
+The flag is normally off; you may wish to turn it on when writing critical
+data to disk. Because disk errors are rare and verification slows writing,
+you will probably want to leave it off at other times. You can check the
+setting with Function 54H (Get Verify State).
+
+Macro Definition:
+
+
+verify macro switch
+ mov al,switch
+ mov ah,2EH
+ int 21H
+ endm
+
+
+
+30
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Example:
+
+The following program copies the contents of a single-sided disk in drive A
+to the disk in drive B, verifying each write. It uses a buffer of 32K bytes.
+
+on equ 1
+off equ 0
+;
+prompt db "Source in A, target in B",0DH,0AH
+ db "Any key to start. $"
+first dw 0
+buffer db 60 dup (512 dup(?)) ;60 sectors
+;
+begin: display prompt ;see Function 09H
+ read_kbd ;see Function 08H
+ verify on ;THIS FUNCTION
+ mov cx,6 ;copy 60 sectors
+ ;6 times
+copy: push cx ;save counter
+ abs_disk_read 0,buffer,60,first ;see Int 25H
+ abs_disk_write 1,buffer,64,first ;see Int 26H
+ add first,60 ;do next 60 sectors
+ pop cx ;restore counter
+ loop copy ;do it again
+ verify off ;THIS FUNCTION
+
+
+
+  31
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Get Disk Transfer Address (Function 2FH)
+
+ Call:
+
+ AH = 2FH
+
+ Return:
+
+ ES:BX
+  Pointer to Disk Transfer Address
+
+
+
+Comments:
+
+Function 2FH returns the segment address of the current Disk Transfer
+Address in ES and the offset in BX.
+
+Macro Definition:
+
+
+get_dta macro
+  mov ah,2fH
+  int 21H
+  endm
+
+
+Example:
+
+The following program displays the current Disk Transfer Address in the
+form: segment:offset.
+
+message db "DTA -- : ",0DH,0AH,"$"
+sixteen db 10H
+temp db 2 dup (?)
+;
+begin: get_dta ;THIS FUNCTION
+ mov word ptr temp,ex ;To access each byte
+ convert temp[1],sixteen,message[07H] ;See end of
+ convert temp,sixteen,message[09H] ;chapter for
+
+32
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+ convert bh,sixteen,message[0CH] ;description
+ convert bl,sixteen,message[0EH] ;of CONVERT
+ display message ;See Function 09H
+
+
+
+  33
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Get MS-DOS Version Number (Function 30H)
+
+ Call:
+
+ AH = 30H
+
+ Return:
+
+ AL
+  Major version number
+ AH
+  Minor version number
+ BH
+  OEM serial number
+ BL:CX
+  24-bit user (serial) number
+
+
+
+Comments:
+
+Function 30H returns the MS-DOS version number. AL returns the major
+version number; AH returns the minor version number. (For example,
+MS-DOS 3.0 returns 3 in AL and 0 in AH.)
+
+If AL returns 0, the MS-DOS version is earlier than 2.0.
+
+Macro Definition:
+
+
+get_version macro
+  mov ah,30H
+  int 21H
+  endm
+
+
+Example:
+
+The following program displays the MS-DOS version if it is 1.28 or
+greater.
+
+message db "MS-DOS Version . ",0DH,0AH,"$"
+ten db 0AH ;For CONVERT
+;
+begin: get_version ;THIS FUNCTION
+ cmp al,0 ;1.28 or later?
+
+34
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+ jng return ;No, go home
+ convert al,ten,message[0FH] ;See end of chapter
+ convert ah,ten,message[12H] ;for description
+ display message ;See Function 9
+
+
+
+  35
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Keep Process (Function 31H)
+
+ Call:
+
+ AH = 31H
+ AL
+  Return code
+ DX
+  Memory size, in paragraphs
+
+ Return:
+
+ None
+
+
+
+Comments:
+
+Function 31H makes a program remain resident after it terminates. You
+can use it to install device-specific interrupt handlers. But unlike Interrupt
+27H (Terminate But Stay Resident), this function request allows more
+than 64K bytes to remain resident and does not require CS to contain the
+segment address of the Program Segment Prefix. You should use Function
+31H to install a resident program unless your program must be compatible
+with MS-DOS versions earlier than 2.0.
+
+DX must contain the number of paragraphs of memory required by the
+program (one paragraph = 16 bytes). AL contains an exit code.
+
+Be careful when using this function with .exe programs. The value in DX
+must be the total size to remain resident, not just the size of the code seg-
+ment which is to remain resident. A typical error is to forget about the
+100H-byte program-header-prefix and give a value in DX that is 10H too
+small.
+
+MS-DOS terminates the current process and tries to set the memory allo-
+cation to the number of paragraphs in DX. No other allocation blocks
+belonging to the process are released.
+
+
+
+36
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+By using Function 4DH (Get Return Code of Child Process), the parent
+process can retrieve the process's exit code from AL. (You can test this
+exit code by using the if command with errorlevel.)
+
+Macro Definition:
+
+
+keep_process macro return_code,last_byte
+  mov al,return_code
+  mov dx,offset last_byte
+  mov cl,4
+  shr dx,cl
+  inc dx
+  mov ah,31H
+  int 21H
+  endm
+
+
+Example:
+
+Because the most common use of this call is to install a machine-specific
+routine, an example is not shown. The macro definition, however, shows
+the calling syntax.
+
+
+  37
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+CONTROL-C Check (Function 33H)
+
+ Call:
+
+ AH = 33H
+ AL
+  0 = Get state
+  1 = Set state
+ DL (if AL=1)
+  0 = Off
+  1 = On
+
+ Return:
+
+ DL (if AL=0)
+  0 = Off
+  1 = On
+ AL
+  FFH = error (AL was neither 0 nor 1
+  when call was made)
+
+
+Comments:
+
+Function 33H gets or sets the state of CONTROL-C (or CONTROL-BREAK for
+IBM compatibles) checking in MS-DOS. AL must contain a code that
+specifies the requested action:
+
+Code
+ Meaning
+_ ________________________________________________________________
+
+0 Current state of CONTROL-C checking in DL
+
+1 Set state of CONTROL-C checking to the value in DL
+
+If AL is 0, DL returns the current state (0=off, 1=on). If AL is 1, the value
+in DL specifies the state to be set (0=off, 1=on). If AL is neither 0 nor 1,
+AL returns FFH and the state of CONTROL-C checking is unaffected.
+
+MS-DOS normally checks for CONTROL-C only when carrying out certain
+function requests in the 01H through 0CH group (see the description of
+specific calls for details). When CONTROL-C checking is on, MS-DOS checks
+for CONTROL-C when carrying out any function request. For example, if
+CONTROL-C checking is off, all disk I/O proceeds without interruption, but
+if it is on, the CONTROL-C interrupt is issued at the function request that
+initiates the disk operation.
+
+_ ________________________________________________________________
+
+Note
+
+38
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+ Programs that use Function 06H (Direct Console I/O) or 07H (Direct
+ Console Input) to read CONTROL-C as data must ensure that the
+ CONTROL-C checking is off.
+
+_ ________________________________________________________________
+
+
+Macro Definition:
+
+
+ctrl_c_ck macro action,state
+  mov al,action
+  mov dl,state
+  mov ah,33H
+  int 21H
+  endm
+
+
+Example:
+
+The following program displays a message that tells whether CONTROL-C
+checking is on or off:
+
+message db "CONTROL-C checking ","$"
+on db "on","$",0DH,0AH,"$"
+off db "off","$",0DH,0AH,"$"
+;
+begin: display message ;See Function 09H
+ ctrl_c_ck 0 ;THIS FUNCTION
+ cmp dl,0 ;Is checking off?
+ jg ck_on ;No
+ display off ;See Function 09H
+ jmp return ;Go home
+ck_on: display on ;See Function 09H
+
+
+
+  39
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Get Interrupt Vector (Function 35H)
+
+ Call:
+
+ AH = 35H
+ AL
+  Interrupt number
+
+ Return:
+
+ ES:BX
+  Pointer to interrupt routine
+
+
+
+Comments:
+
+Function 35H gets the address from the interrupt-vector table for the
+specified interrupt. AL must contain the number of an interrupt.
+
+ES returns the segment address of the interrupt handler; BX returns the
+offset.
+
+To avoid compatibility problems, programs should never read an interrupt
+vector directly from memory, nor set an interrupt vector by writing it into
+memory. Use this function request to get a vector and Function 25H (Set
+Interrupt Vector) to set a vector, unless your program must be compatible
+with MS-DOS versions earlier than 2.0.
+
+Macro Definition:
+
+
+get_vector macro interrupt
+  mov al,interrupt
+  mov ah,35H
+  int 21H
+  endm
+
+
+
+40
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Example:
+
+The following program displays the segment and offset (CS:IP) for the
+handler for Interrupt 25H (Absolute Disk Read).
+
+message db "Interrupt 25H -- CS:0000 IP:0000"
+ db 0DH,0AH,"$"
+vec_seg db 2 dup (?)
+vec_off db 2 dup (?)
+;
+begin: push es ;save ES
+ get_vector 25H ;THIS FUNCTION
+ mov ax,es ;INT25H segment in AX
+ pop es ;save ES
+ convert ax,16,message[20] ;see end of chapter
+ convert bx,16,message[28] ;see end of chapter
+ display message ;See Function 9
+
+
+
+  41
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Get Disk Free Space (Function 36H)
+
+ Call:
+
+ AH = 36H
+ DL
+  Drive (0=default, 1=A, etc.)
+
+ Return:
+
+ AX
+  0FFFFH if drive number is invalid;
+  otherwise, sectors per cluster
+ BX
+  Available clusters
+ CX
+  Bytes per sector
+ DX
+  Clusters per drive
+
+
+
+Comments:
+
+Function 36H returns the number of clusters available on the disk in the
+specified drive, and the information necessary to calculate the number of
+bytes available on the disk. DL must contain a drive number (0=default,
+1=A, etc.). If the drive number is valid, MS-DOS returns the information
+in the following registers:
+
+Register
+ Contents
+_ ________________________________________________________________
+
+AX Sectors per cluster
+
+BX Available clusters
+
+CX Bytes per sector
+
+DX Total clusters
+
+If the drive number is invalid, AX returns 0FFFFH.
+
+This call supersedes Functions 1BH and 1CH in earlier MS-DOS versions.
+
+
+42
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Macro Definition:
+
+
+get_disk_space macro drive
+  mov dl,drive
+  mov ah,36H
+  int 21H
+  endm
+
+
+Example:
+
+The following program displays the space information for the disk in drive
+B.
+
+message db " clusters on drive B.",0DH,0AH ;DX
+ db " clusters available.",0DH,0AH ;BX
+ db " sectors per cluster.",0DH,0AH ;AX
+ db " bytes per sector,",0DH,0AH,"$" ;CX
+;
+begin: get_disk_space 2 ;THIS FUNCTION
+ convert ax,10,message[55] ;see end of chapter
+ convert bx,10,message[28] ;see end of chapter
+ convert cx,10,message[83] ;see end of chapter
+ convert dx,10,message ;see end of chapter
+ display message ;See Function 09H
+
+
+
+  43
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Get Country Data (Function 38H)
+
+ Call:
+
+ AH = 38H
+ AL
+  00H = Current country
+  1-0FEH = Country code
+  0FFH = BX contains country code
+ BX (if AL = 0FFH)
+  Country code 255 or higher
+ DS:DX
+  Pointer to 32-byte memory area
+
+ Return:
+
+ Carry set:
+ AX
+  2 = Invalid country code
+ Carry not set:
+ BX
+  Country code
+
+
+Comments:
+
+Function 38H gets the country-dependent information that MS-DOS uses
+to control the keyboard and display, or it sets the currently defined coun-
+try (to set the country code, see the next function request description, Set
+Country Data). To get the information, DX must contain the offset (from
+the segment address in DS) of a 32-byte memory area to which the country
+data returns. AL specifies the country code:
+
+Value in AL
+ Meaning
+_ ________________________________________________________________
+
+00H Retrieve information about the country currently set.
+
+1 to 0FEH Retrieve information about the country identified by this
+ code.
+
+0FFH Retrieve information about the country identified by the
+ code in BX.
+
+BX must contain the country code if the code is 255 or greater. The coun-
+try code is usually the international telephone-prefix code.
+
+
+
+44
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+The country-dependent information returns in the following form:
+
+  Offset 
+Hex  Decimal  Field Name  Length in bytes 
+
+_ ________________________________________________________________
+
+00H   0  Date format  2 (word) 
+02H   2  Currency symbol  5 (ASCIZ string) 
+07H   7  Thousands separator  2 (ASCIZ string) 
+09H   9  Decimal separator  2 (ASCIZ string) 
+0BH   11  Date separator  2 (ASCIZ string) 
+0DH   13  Time separator  2 (ASCIZ string) 
+0FH   15  Bit field  1 
+10H   16  Currency places  1 
+11H   17  Time format  1 
+12H   18  Case-map call address  4 (DWORD) 
+16H   22  Data-list separator  2 (ASCIZ string) 
+18H   24  Reserved  10 
+
+_ ________________________________________________________________
+
+Date Format:
+
+0 = USA (month/day/year)
+1 = Europe (day/month/year)
+2 = Japan (year/month/day)
+
+
+Bit Field:
+
+Bit  Value  Meaning 
+
+_ ________________________________________________________________
+
+0  0  Currency symbol precedes amount 
+
+  1  Currency symbol follows amount 
+
+1  0  No space between symbol and amount 
+
+  1  One space between symbol and amount 
+
+_ ________________________________________________________________
+
+All other bits are undefined.
+
+Time format:
+
+0 = 12-hour clock
+1 = 24-hour clock
+
+Currency Places:
+
+
+
+  45
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+Specifies the number of places that appear after the decimal point on
+currency amounts.
+
+Case-Mapping Call Address:
+
+Specifies the segment and offset of a FAR procedure that performs
+country-specific lowercase-to-uppercase mapping on character values from
+80H to 0FFH. You call it with the character to be mapped in AL. If there
+is an uppercase code for the character, it is returned in AL; if there is not,
+or if you call it with a value less than 80H in AL, AL returns unchanged.
+AL and the FLAGS are the only altered registers.
+
+If there is an error, the carry flag (CF) is set and the error code returns in
+AX:
+
+Code
+ Meaning
+_ ________________________________________________________________
+
+2 Invalid country code (no table for it).
+
+
+Macro Definition:
+
+
+get_country macro country,buffer
+  local gc_01
+  mov dx,offset buffer
+  mov ax,country
+  cmp ax,OFFH
+  jl gc_01
+  mov al,OFFh
+  mov bx,country
+gc_01: mov ah,38h
+  int 21H
+  endm
+
+
+Example:
+
+The following program displays the time and date in the format appropri-
+ate to the current country code, and the number 999,999 and 99/100 as a
+currency amount with the proper currency symbol and separators.
+
+time db " : : ",5 dup (20H),"$"
+date db " / / ",5 dup (20H),"$"
+number db "999?999?99",0DH,0AH,"$"
+data_area db 32 dup (?)
+;
+begin: get_country 0,data_area ;THIS FUNCTION
+ get_time ;See Function 2CH
+ byte_to_dec ch,time ;See end of chapter
+ byte_to_dec cl,time[03H] ;for description of
+ byte_to_dec dh,time[06H] ;CONVERT macro
+ get_date ;See Function 2AH
+
+46
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+ sub cx,1900 ;Want last 2 digits
+ byte_to_dec cl,date[06H] ;See end of chapter
+ cmp word ptr data_area,0 ;Check country code
+ jne not_usa ;It's not USA
+ byte_to_dec dh,date ;See end of chapter
+ byte_to_dec dl,date[03H] ;See end of chapter
+ jmp all_done ;Display data
+not_usa: byte_to_dec dl,date ;See end of chapter
+ byte_to_dec dh,date[03H] ;See end of chapter
+all_done: mov al,data_area[07H] ;Thousand separator
+ mov number[03H],al ;Put in NUMBER
+ mov al,data_area[09H] ;Decimal separator
+ mov number[07H],al ;Put in AMOUNT
+ display time ;See Function 09H
+ display date ;See Function 09H
+ display_char data_area[02H] ;See Function 02H
+ display number ;See Function 09H
+
+
+
+  47
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Set Country Data (Function 38H)
+
+ Call:
+
+ AH = 38H
+ DX = -1 (0FFFFH)
+ AL
+  Country code less than 255, or
+  0FFH if the country code is in BX
+ BX (if AL=0FFH)
+  Country code 255 or higher
+
+ Return:
+
+ Carry set:
+ AX
+  2 = Invalid country code
+ Carry not set:
+  No error
+
+
+
+Comments:
+
+Function 38H sets the country code that MS-DOS uses to control the key-
+board and the display, or it retrieves the country-dependent information
+(to get the country data, see the previous function request description, Get
+Country Data). To set the information, DX must contain 0FFFFH. AL
+must contain either the country code, if it is less than 255, or 255 to indi-
+cate that the country code is in BX. If AL contains 0FFH, BX must con-
+tain the country code.
+
+The country code is usually the international telephone prefix-code. See
+"Get Country Data" for a description of the country data and how it is
+used.
+
+If there is an error, the carry flag (CF) is set and the error code returns in
+AX:
+
+Code
+ Meaning
+_ ________________________________________________________________
+
+2 Invalid country code (no table for it).
+
+
+
+48
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Macro Definition:
+
+
+set_country macro country
+  local sc_01
+  mov dx,0FFFFH
+  mov ax,country
+  cmp ax,0FFH
+  jl sc_01
+  mov bx,country
+  mov al,0ffh
+sc_01: mov ah,38H
+  int 21H
+  endm
+
+
+Example:
+
+The following program sets the country code to the United Kingdom (44).
+
+uk equ 44
+;
+begin: set_country uk ;THIS FUNCTION
+ jc error ;routine not shown
+
+
+
+  49
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Create Directory (Function 39H)
+
+ Call:
+
+ AH = 39H
+ DS:DX
+  Pointer to pathname
+
+ Return:
+
+ Carry set:
+ AX
+  2 = File not found
+  3 = Path not found
+  5 = Access denied
+ Carry not set:
+  No error
+
+
+
+Comments:
+
+Function 39H creates a new subdirectory. DX must contain the offset
+(from the segment address in DS) of an ASCIZ string that specifies the path-
+name of the new subdirectory.
+
+If there is an error, the carry flag (CF) is set and the error code returns in
+AX:
+
+Code
+ Meaning
+_ ________________________________________________________________
+
+2 File not found
+
+3 Path not found
+
+5 No room in the parent directory, a file with the same name exists
+ in the current directory, or the path specifies a device
+
+
+Macro Definition:
+
+
+make_dir macro path
+  mov dx,offset path
+  mov ah,39H
+  int 21H
+  endm
+
+
+50
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Example:
+
+The following program adds a subdirectory named new_dir to the root
+directory on the disk in drive B and changes the current directory to
+new_dir. The program then changes the current directory back to the ori-
+ginal directory and then deletes new_dir. It displays the current directory
+after each step to confirm the changes.
+
+old_path db "b:
+new_path db "b:\new_dir",0
+buffer db "b:
+;
+begin: get_dir 2,old_path[03H] ;See Function 47H
+ jc error_get ;Routine not shown
+ display_asciz old_path ;See end of chapter
+ make_dir new_path ;THIS FUNCTION
+ jc error_make ;Routine not shown
+ change_dir new_path ;See Function 3BH
+ jc error_change ;Routine not shown
+ get_dir 2,buffer[03H] ;See Function 47H
+ jc error_get ;Routine not shown
+ display_asciz buffer ;See end of chapter
+ change_dir old_path ;See Function 3BH
+ jc error_change ;Routine not shown
+ rem_dir new_path ;See Function 3AH
+ jc error_rem ;Routine not shown
+ get_dir 2,buffer[03H] ;See Function 47H
+ jc error_get ;Routine not shown
+ display_asciz buffer ;See end of chapter
+
+
+
+  51
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Remove Directory (Function 3AH)
+
+ Call:
+
+ AH = 3AH
+ DS:DX
+  Pointer to pathname
+
+ Return:
+
+ Carry set:
+ AX
+  2 = File not found
+  3 = Path not found
+  5 = Access denied
+  16 = Current directory
+ Carry not set:
+  No error
+
+
+
+Comments:
+
+Function 3AH deletes a subdirectory. DX must contain the offset (from the
+segment address in DS) of an ASCIZ string that specifies the pathname of
+the subdirectory you want to delete.
+
+The subdirectory must not contain any files. You cannot erase the current
+directory. If there is an error, the carry flag (CF) is set and the error code
+returns in AX:
+
+Code
+ Meaning
+_ ________________________________________________________________
+
+2 File not found
+
+3 Path not found
+
+5 Directory not empty, or path doesn't specify a directory, or it
+ specifies the root directory, or it is invalid
+
+16 Path specifies current directory
+
+
+
+52
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Macro Definition:
+
+
+rem_dir macro path
+  mov dx,offset path
+  mov ah,3AH
+  int 21H
+  endm
+
+
+Example:
+
+The following program adds a subdirectory named new_dir to the root
+directory on the disk in drive B and changes the current directory to
+new_dir. The program then changes the current directory back to the ori-
+ginal directory and deletes new_dir. It displays the current directory after
+each step to confirm the changes.
+
+old_path db "b:
+new_path db "b:\new_dir",0
+buffer db "b:
+;
+begin: get_dir 2,old_path[03H] ;See Function 47H
+ jc error_get ;Routine not shown
+ display_asciz old_path ;See end of chapter
+ make_dir new_path ;See Function 39H
+ jc error_make ;Routine not shown
+ change_dir new_path ;See Function 3BH
+ jc error_change ;Routine not shown
+ get_dir 2,buffer[03H] ;See Function 47H
+ jc error_get ;Routine not shown
+ display_asciz buffer ;See end of chapter
+ change_dir old_path ;See Function 3BH
+ jc error_change ;Routine not shown
+ rem_dir new_path ;THIS FUNCTION
+ jc error_rem ;Routine not shown
+ get_dir 2,buffer[03H] ;See Function 47H
+ jc error_get ;Routine not shown
+ display_asciz buffer ;See end of chapter
+
+
+
+  53
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Change Current Directory (Function 3BH)
+
+ Call:
+
+ AH = 3BH
+ DS:DX
+  Pointer to pathname
+
+ Return:
+
+ Carry set:
+ AX
+  2 = File not found
+  3 = Path not found
+ Carry not set:
+  No error
+
+
+
+Comments:
+
+Function 3BH changes the current directory. DX must contain the offset
+(from the segment address in DS) of an ASCIZ string that specifies the path-
+name of the new current directory.
+
+The directory string is limited to 64 characters.
+
+If any member of the path doesn't exist, the path is unchanged. If there is
+an error, the carry flag (CF) is set and the error code returns in AX:
+
+Code
+ Meaning
+_ ________________________________________________________________
+
+2 File not found
+
+3 Path either doesn't exist or it specifies a file instead of a directory
+
+
+Macro Definition:
+
+
+change_dir macro path
+  mov dx,offset path
+  mov ah,3BH
+  int 21H
+  endm
+
+
+
+54
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Example:
+
+The following program adds a subdirectory named new_dir to the root
+directory that is on the disk in drive B and changes the current directory
+to new_dir. The program then changes the current directory back to the
+original directory and deletes new_dir. It displays the current directory
+after each step to confirm the changes.
+
+old_path db "b:
+new_path db "b:\new_dir",0
+buffer db "b:
+;
+begin: get_dir 2,old_path[03H] ;See Function 47H
+ jc error_get ;Routine not shown
+ display_asciz old_path ;See end of chapter
+ make_dir new_path ;See Function 39H
+ jc error_make ;Routine not shown
+ change_dir new_path ;THIS FUNCTION
+ jc error_change ;Routine not shown
+ get_dir 2,buffer[03H] ;See Function 47H
+ jc error_get ;Routine not shown
+ display_asciz buffer ;See end of chapter
+ change_dir old_path ;See Function 3BH
+ jc error_change ;Routine not shown
+ rem_dir new_path ;See Function 3AH
+ jc error_rem ;Routine not shown
+ get_dir 2,buffer[03H] ;See Function 47H
+ jc error_get ;Routine not shown
+ display_asciz buffer ;See end of chapter
+
+
+
+  55
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Create Handle (Function 3CH)
+
+ Call:
+
+ AH = 3CH
+ DS:DX
+  Pointer to pathname
+ CX
+  File attribute
+
+ Return:
+
+ Carry set:
+ AX
+  2 = File not found
+  3 = Path not found
+  4 = Too many open files
+  5 = Access denied
+ Carry not set:
+ AX
+  Handle
+
+
+Comments:
+
+Function 3CH creates a file and assigns it the first available handle. DX
+must contain the offset (from the segment address in DS) of an ASCIZ string
+that specifies the pathname of the file to be created. CX must contain the
+attribute to be assigned to the file, as described under "File Attributes"
+earlier in this chapter.
+
+If the specified file does not exist, this function creates it. But if the file
+already exists, it is truncated to a length of 0. Function 3CH then assigns
+the attribute in CX to the file and opens it for read/write. AX returns the
+file handle.
+
+If there is an error, the carry flag (CF) is set and the error code returns in
+AX:
+
+Code
+ Meaning
+_ ________________________________________________________________
+
+2 File not found
+
+3 Path is invalid
+
+4 Too many open files (no handle available)
+
+5 Directory is full, a directory with the same name exists, or a file
+ with the same name exists with more restrictive attributes
+
+
+56
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Macro Definition:
+
+
+create_handle macro path,attrib
+  mov dx,offset path
+  mov cx,attrib
+  mov ah,3CH
+  int 21H
+  endm
+
+
+Example:
+
+The following program creates a file named dir.tmp, containing the name
+and extension of each file in the current directory, on the disk in drive B.
+
+srch_file db "b:*.*",0
+tmp_file db "b:dir.tmp",0
+buffer db 43 dup (?)
+handle dw ?
+;
+begin: set_dta buffer ;See Function 1AH
+ find_first_file srch_file,16H ;See Function 4EH
+ cmp ax,12H ;Directory empty?
+ je all_done ;Yes, go home
+ create_handle tmp_file,0 ;THIS FUNCTION
+ jc error ;Routine not shown
+ mov handle,ax ;Save handle
+write_it: write_handle handle,buffer[1EH],12 ;Function 40H
+ find_next_file ;See Function 4FH
+ cmp ax,12H ;Another entry?
+ je all_done ;No, go home
+ jmp write_it ;Yes, write record
+all_done: close_handle handle ;See Function 3EH
+
+
+
+  57
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Open Handle (Function 3DH)
+
+ Call:
+
+ AH = 3DH
+ AL
+  Access code (see text)
+ DS:DX
+  Pointer to pathname
+
+ Return:
+
+ Carry set:
+ AX
+  2 = File not found
+  3 = Path not found
+  4 = Too many open files
+  5 = Access denied
+  12 = Invalid access
+ Carry not set:
+  No error
+
+
+Comments:
+
+Function 3DH opens any file, including hidden and system files, for input
+or output. DX contains the offset (from the segment address in DS) of an
+ASCIZ string that specifies the pathname of the file to be opened. AL con-
+tains a code that specifies how the file is to be opened. This code is
+described later under "Controlling Access to the File."
+
+If there is no error, AX returns the file handle. MS-DOS sets the read/write
+pointer to the first byte of the file.
+
+
+58
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Controlling Access to the File
+
+The value in AL is made up of three parts that specify whether the file is
+to be opened for read, write, or both (access code); what access other
+processes have to the file (sharing mode); and whether a child process
+inherits the file (inherit bit).
+
+ |---|-----------|---------------|
+Bit | 7 | 6 5 4 | 3 2 1 0 |
+ |---|---|---|---|---|---|---|---|
+
+ \/ \________/ \____________/
+ | | |
+ | | |--------> Access code
+ | |
+ | |-----------------------> Sharing mode
+ |
+ |-------------------------------> Inherit bit
+
+
+Inherit Bit The high-order bit (bit 7) specifies whether the file is inherited
+by a child process created with Function 4BH (Load and Execute Pro-
+gram). If the bit is 0, the child process inherits the file; if the bit is 1, it
+doesn't.
+
+
+  59
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Sharing Mode
+
+The sharing mode bits (bits 4-6) specify what access, if any, other
+processes have to the open file. It can have the following values:
+
+
+Table 0.2
+
+Sharing Mode Bit Values
+
+_ _________________________________________________________________________
+
+Bits 4-6  Sharing Mode  Description 
+
+_ _________________________________________________________________________
+
+000  Compatibility   
+
+ On a given machine, any process can open the file
+ any number of times with this mode. Fails if the file
+ has been opened with any of the other sharing
+ modes.
+
+001  Deny both   
+
+ Fails if the file has been opened in compatibility
+ mode or for read or write access, even if by the
+ current process.
+
+010  Deny write   
+
+ Fails if the file has been opened in compatibility
+ mode or for write access by any other process.
+
+011  Deny read   
+
+ Fails if the file has been opened in compatibility
+ mode or for read access by any other process.
+
+100  Deny none   
+
+ Fails if the file has been opened in compatibility
+ mode by any other process.
+
+_ _________________________________________________________________________
+
+
+
+60
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Access Code
+
+The access code (bits 0-3) specifies how the file is to be used. It can have
+the following values:
+
+
+Table 0.3
+
+Access Code Bit Values
+
+_ _________________________________________________________________________
+
+  Access   
+Bits 0-3  Allowed  Description 
+
+_ _________________________________________________________________________
+
+0000  Read   
+
+ Fails if the file has been opened in deny read or deny both
+ sharing mode.
+
+0001  Write   
+
+ Fails if the file has been opened in deny write or deny both
+ sharing mode.
+
+0010  Both   
+
+ Fails if the file has been opened in deny read, deny write, or
+ deny both sharing mode.
+
+_ _________________________________________________________________________
+
+If there is an error, the carry flag (CF) is set and the error code is returned
+in AX:
+
+Code
+ Meaning
+_ ________________________________________________________________
+
+2 Specified file is invalid or doesn't exist
+
+3 Specified path is invalid or doesn't exist
+
+4 No handles are available in the current process or the internal sys-
+ tem tables are full
+
+5 Program attempted to open a directory or VolumeID, or tried to
+ open a read-only file for writing
+
+12 Access code (bits 0-3 of AL) not 0, 1, or 2
+
+If this system call fails because of a file-sharing error, MS-DOS issues
+Interrupt 24H with error code 2 (Drive Not Ready). A subsequent Function
+59H (Get Extended Error) returns the extended error code that specifies a
+sharing violation.
+
+When opening a file, it is important to inform MS-DOS of any operations
+that other processes may perform on this file (sharing mode). The default
+(compatibility mode) denies all other processes access to the file, unless
+they also attempt to open the file in compatibility mode.
+
+The following table shows the effect of opening a file with compatibility
+mode set:
+
+
+
+  61
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+Type of File Opening  Read-Only File  Not Read-Only 
+
+_ ________________________________________________________________
+
+First open for read, write,  Succeeds  Succeeds 
+or both by machine/process      
+"N"
+
+Subsequent opens by machine  Succeeds  Succeeds 
+or process      
+"N"
+
+An open by another machine  Succeeds  Fails 
+or process     
+
+_ ________________________________________________________________
+
+Files may be read-only with the MS-DOS attrib command or by a read-only
+share over the network.
+
+It may be all right for other processes to continue to read the file while
+your process is operating on it. In this case, you should specify "Deny
+Write," which inhibits other processes from writing to your files but allows
+them to read from these files.
+
+Similarly, it is important for you to specify what operations your process
+will perform ("Access" mode). If another process has the file open with
+any sharing mode other than "Deny" mode, then the default mode
+("Read/write") causes the open request to fail. If you only want to read
+the file, your open request succeeds unless all other processes have
+specified "Deny" mode or "Deny write."
+
+Macro Definition:
+
+
+open_handle macro path,access
+  mov dx, offset path
+  mov al, access
+  mov ah, 3DH
+  int 21H
+  endm
+
+
+Example:
+
+The following program prints a file named textfile.asc that is on the disk in
+drive B.
+
+file db "b:textfile.asc",0
+buffer db ?
+handle dw ?
+;
+begin: open_handle file,0 ;THIS FUNCTION
+ mov handle,ax ;Save handle
+read_char: read_handle handle,buffer,1 ;Read 1 character
+
+62
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+ jc error_read ;Routine not shown
+ cmp ax,0 ;End of file?
+ je return ;Yes, go home
+ print_char buffer ;See Function 05H
+ jmp read_char ;Read another
+
+
+
+  63
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Close Handle (Function 3EH)
+
+ Call:
+
+ AH = 3EH
+ BX
+  Handle
+
+ Return:
+
+ Carry set:
+ AX
+  6 = Invalid handle
+ Carry not set:
+  No error
+
+
+
+Comments:
+
+Function 3EH closes a file opened with Function 3DH (Open Handle) or
+3CH (Create Handle). BX must contain the handle of the open file that you
+want to close.
+
+If there is no error, MS-DOS closes the file and flushes all internal buffers.
+If there is an error, the carry flag (CF) is set and the error code returns in
+AX:
+
+Code
+ Meaning
+_ ________________________________________________________________
+
+6 Handle not open or invalid
+
+
+Macro Definition:
+
+
+close_handle macro handle
+  mov bx,handle
+  mov ah,3EH
+  int 21H
+  endm
+
+
+
+64
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Example:
+
+The following program creates a file named dir.tmp, containing the
+filename and extension of each file in the current directory, in the current
+directory on the disk in drive B.
+
+srch_file db "b:*.*",0
+tmp_file db "b:dir.tmp",0
+buffer db 43 dup (?)
+handle dw ?
+;
+begin: set_dta buffer ;See Function 1AH
+ find_first_file srch_file,16H ;See Function 4EH
+ cmp ax,12H ;Directory empty?
+ je all_done ;Yes, go home
+ create_handle tmp_file,0 ;See Function 3CH
+ jc error_create ;Routine not shown
+ mov handle,ax ;Save handle
+write_it: write_handle handle,buffer[1EH],12 ;See Function
+ jc error_write ;40H
+ find_next_file ;See Function 4FH
+ cmp ax,12H ;Another entry?
+ je all_done ;No, go home
+ jmp write_it ;Yes, write record
+all_done: close_handle handle ;See Function 3EH
+ jc error_close ;Routine not shown
+
+
+
+  65
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+_ ______________
+
+
+Read Handle (Function 3FH)
+
+ Call:
+
+ AH = 3FH
+ BX
+  Handle
+ CX
+  Bytes to read
+ DS:DX
+  Pointer to buffer
+
+ Return:
+
+ Carry set:
+ AX
+  5 = Access denied
+  6 = Invalid handle
+ Carry not set:
+ AX
+  Bytes read
+
+
+Comments:
+
+Function 3FH reads from the file or device associated with the specified
+handle. BX must contain the handle. CX must contain the number of
+bytes to be read. DX must contain the offset (to the segment address in
+DS) of the buffer.
+
+If there is no error, AX returns the number of bytes read; if you attempt to
+read starting at end of file, AX returns 0. The number of bytes specified in
+CX is not necessarily transferred to the buffer; if you use this call to read
+from the keyboard, for example, it reads only up to the first carriage-
+return.
+
+If you use this function request to read from standard input, you can
+redirect the input.
+
+If there is an error, the carry flag (CF) is set and the error code returns in
+AX:
+
+Code
+ Meaning
+_ ________________________________________________________________
+
+5 Handle not open for reading
+
+6 Handle not open or invalid
+
+
+
+66
+
+_ _  |  |  _ _
+
+
+
+
+_ _  |  |  _ _
+
+
+
+ _ ______________
+
+
+Macro Definition:
+
+
+read_handle macro handle,buffer,bytes
+  mov bx,handle
+  mov dx,offset buffer
+  mov cx,bytes
+  mov ah,3FH
+  int 21H
+  endm
+
+
+Example:
+
+The following program displays a file named textfile.asc that is on the disk
+in drive B.
+
+filename db "b:\textfile.asc",0
+buffer db 129 dup (?)
+handle dw ?
+;
+begin: open_handle filename,0 ;See Function 3DH
+ jc error_open ;Routine not shown
+ mov handle,ax ;Save handle
+read_file: read_handle buffer,file_handle,128
+ jc error_open ;Routine not shown
+ cmp ax,0 ;End of file?
+ je return ;Yes, go home
+ mov bx,ax ;# of bytes read
+ mov buffer[bx],"$" ;Make a string
+ display buffer ;See Function 09H
+ jmp read_file ;Read more
+
+
+
+  67
+
+_ _  |  |  _ _
+
+
+
